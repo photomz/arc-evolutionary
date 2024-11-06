@@ -4,8 +4,6 @@ import random
 import string
 import traceback
 import typing as T
-from code.db import init_db_pool, pool
-from code.prompts import prompts
 from copy import deepcopy
 from enum import Enum
 from pathlib import Path
@@ -14,6 +12,9 @@ import numpy as np
 from devtools import debug
 from pydantic import BaseModel, computed_field
 from tqdm import tqdm
+
+from src.db import init_db_pool, pool
+from src.prompts import prompts
 
 GRID = list[list[int]]
 
@@ -314,8 +315,8 @@ class Attempt(BaseModel):
     def llm_response_to_result_grids(
         challenge: Challenge, llm_response: str, returns_python: bool
     ) -> tuple[str | None, GRID, list[GRID]]:
-        from code.llms import parse_2d_arrays_from_string, parse_python_backticks
-        from code.run_python import run_python_transform
+        from src.llms import parse_2d_arrays_from_string, parse_python_backticks
+        from src.run_python import run_python_transform
 
         if returns_python:
             python_str = parse_python_backticks(llm_response)
@@ -350,7 +351,7 @@ class Attempt(BaseModel):
         messages: list[dict[str, T.Any]],
         attempt_config: RootAttemptConfig | FixAttemptConfig,
     ) -> "Attempt":
-        from code.llms import get_next_message
+        from src.llms import get_next_message
 
         random_str = random_string()
         id = f"{challenge.id}-{random_str}"
@@ -403,8 +404,8 @@ class Attempt(BaseModel):
         fixing: list["Attempt"],
         # root_attempt_config: RootAttemptConfig,
     ) -> list[dict[str, T.Any]]:
-        from code.logic import challenge_to_messages
-        from code.reps import grid_diffs_to_ascii, grid_to_ascii
+        from src.logic import challenge_to_messages
+        from src.reps import grid_diffs_to_ascii, grid_to_ascii
 
         assert len(fixing) > 0
         if not isinstance(attempt_config.prompt_config, FixPromptConfig):
@@ -550,7 +551,7 @@ Once you are done reasoning, rewrite the code to fix the issue. Return the code 
         raise_exception: bool,
         fixing: list["Attempt"],
     ) -> T.Optional["Attempt"]:
-        from code.logic import challenge_to_messages
+        from src.logic import challenge_to_messages
 
         if not fixing:
             assert isinstance(attempt_config, RootAttemptConfig)
@@ -589,7 +590,7 @@ Once you are done reasoning, rewrite the code to fix the issue. Return the code 
         return_correct_attempt: bool = True,
         raise_exception: bool,
     ) -> T.Optional["Attempt"]:
-        from code.reps import grid_diffs_to_ascii, grid_to_ascii
+        from src.reps import grid_diffs_to_ascii, grid_to_ascii
 
         if not isinstance(attempt_config.prompt_config, FixPromptConfig):
             raise Exception("Given prompt must be a fix prompt.")
@@ -710,7 +711,7 @@ Once you are done reasoning, rewrite the code to fix the issue. Return the code 
             return None
 
     def plot(self, ignore_fixing: bool) -> None:
-        from code.plot import plot_results
+        from src.plot import plot_results
 
         if ignore_fixing:
             plot_results([self])
@@ -792,7 +793,7 @@ Once you are done reasoning, rewrite the code to fix the issue. Return the code 
         global pool
         if not pool:
             await init_db_pool()
-            from code.db import pool
+            from src.db import pool
 
         async with pool.acquire() as conn:
             # Use execute_many for efficient bulk insertion
@@ -815,7 +816,7 @@ Once you are done reasoning, rewrite the code to fix the issue. Return the code 
         global pool
         if not pool:
             await init_db_pool()
-            from code.db import pool
+            from src.db import pool
 
         async with pool.acquire() as conn:
             # Create a list of records for bulk insertion

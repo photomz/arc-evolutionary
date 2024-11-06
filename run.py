@@ -1,13 +1,14 @@
 import asyncio
 import json
-from code.data import build_challenges
-from code.logic import solve_challenge
-from code.models import GRID
-from code.trees.prod import RootAttemptConfig, big_claude_tree, small_claude_tree
 from pathlib import Path
 
 from devtools import debug
 from pydantic import BaseModel, TypeAdapter
+
+from src.data import build_challenges
+from src.logic import solve_challenge
+from src.models import GRID
+from src.trees.prod import RootAttemptConfig, big_claude_tree, small_claude_tree
 
 
 class ChallengeSolution(BaseModel):
@@ -86,11 +87,11 @@ def evaluate_solutions(attempts_solutions_path: str, truth_solutions_path: str) 
 
 
 async def main() -> None:
-    await run()
-    # evaluate_solutions(
-    #     attempts_solutions_path="test_data/eval_solutions.json",
-    #     truth_solutions_path="arc-prize-2024/arc-agi_evaluation_solutions.json",
-    # )
+    # await run()
+    evaluate_solutions(
+        attempts_solutions_path="test_data/eval_solutions.json",
+        truth_solutions_path="arc-prize-2024/arc-agi_evaluation_solutions.json",
+    )
 
 
 if __name__ == "__main__":

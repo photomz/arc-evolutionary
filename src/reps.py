@@ -1,8 +1,9 @@
-from code.models import GRID
-from code.prompts.colors import color_map
 from collections import defaultdict
 
 import numpy as np
+
+from src.models import GRID
+from src.prompts.colors import color_map
 
 spreadsheet_col_labels = [
     "A",

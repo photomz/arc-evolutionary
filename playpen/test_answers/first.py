@@ -1018,7 +1018,7 @@ def solve_first() -> None:
 
 
 def solve_sec() -> None:
-    from code.main import plot_grid
+    from src.main import plot_grid
 
     grid_lst = [
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -1076,7 +1076,7 @@ def solve_sec() -> None:
 
 
 def solve_late() -> None:
-    from code.main import plot_grid
+    from src.main import plot_grid
 
     grid_lst = [
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],

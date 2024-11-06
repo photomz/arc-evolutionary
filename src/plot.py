@@ -1,10 +1,11 @@
 import math
-from code.models import Attempt
-from code.prompts.colors import color_map
 
 import matplotlib.pyplot as plt
 from devtools import pformat
 from matplotlib import colors
+
+from src.models import Attempt
+from src.prompts.colors import color_map
 
 
 def plot_grid(

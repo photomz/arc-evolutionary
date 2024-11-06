@@ -1,4 +1,4 @@
-from code.models import (
+from src.models import (
     AttemptEdge,
     FixAttemptConfig,
     FixPromptConfig,

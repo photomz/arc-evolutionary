@@ -1,9 +1,10 @@
 import asyncio
 import random
-from code.data import eval_challenges, training_challenges
-from code.logic import solve_challenge
 
 from devtools import debug
+
+from src.data import eval_challenges, training_challenges
+from src.logic import solve_challenge
 
 
 async def main() -> None:
@@ -215,8 +216,8 @@ async def main() -> None:
         # "e69241bd",
     ]
 
-    from code.trees import big_tree, medium_tree, small_tree
-    from code.trees.small import (
+    from src.trees import big_tree, medium_tree, small_tree
+    from src.trees.small import (
         claude_flat_tree,
         claude_gemini_flat_tree,
         gemini_flat_tree,

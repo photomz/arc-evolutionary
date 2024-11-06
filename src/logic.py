@@ -1,8 +1,14 @@
 import os
 import time
 import typing as T
-from code.data import training_challenges
-from code.models import (
+from copy import deepcopy
+
+import numpy as np
+from devtools import debug
+from tqdm.asyncio import tqdm_asyncio
+
+from src.data import training_challenges
+from src.models import (
     GRID,
     Attempt,
     AttemptEdge,
@@ -13,7 +19,7 @@ from code.models import (
     prompt_map,
     random_string,
 )
-from code.prompts.examples import (
+from src.prompts.examples import (
     GRID_CHANGE_PROMPT_EXAMPLE_1,
     GRID_SAME_PROMPT_EXAMPLE_1,
     example_1_grid_change_challenge_id,
@@ -27,14 +33,9 @@ from code.prompts.examples import (
     example_7_grid_change_challenge_id,
     example_7_reasoning_grid_change_bad_colors,
 )
-from code.render_legacy import grid_to_base64_png_oai_content
-from code.reps import array_to_str, grid_diffs_to_ascii, grid_to_ascii
-from code.run_python import run_python_transform
-from copy import deepcopy
-
-import numpy as np
-from devtools import debug
-from tqdm.asyncio import tqdm_asyncio
+from src.render_legacy import grid_to_base64_png_oai_content
+from src.reps import array_to_str, grid_diffs_to_ascii, grid_to_ascii
+from src.run_python import run_python_transform
 
 
 def content_blocks_from_matrix(

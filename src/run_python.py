@@ -4,10 +4,11 @@ import subprocess
 import sys
 import tempfile
 import time
-from code.models import GRID
 
 from devtools import debug
 from pydantic import BaseModel
+
+from src.models import GRID
 
 
 class PythonResult(BaseModel):

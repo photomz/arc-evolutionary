@@ -1,8 +1,9 @@
 import json
-from code.models import Challenge
 from pathlib import Path
 
 from pydantic import TypeAdapter
+
+from src.models import Challenge
 
 arc_prize_data_path = Path(__file__).parent.parent / "arc-prize-2024"
 SolutionAdapter = TypeAdapter(dict[str, list[list[list[int]]]])

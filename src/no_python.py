@@ -1,6 +1,8 @@
-from code.data import eval_challenges, training_challenges
-from code.main import solve_challenge
-from code.models import (
+from devtools import debug
+
+from src.data import eval_challenges, training_challenges
+from src.main import solve_challenge
+from src.models import (
     Attempt,
     AttemptEdge,
     FixAttemptConfig,
@@ -14,8 +16,6 @@ from code.models import (
     RootAttemptConfig,
     RootPromptConfig,
 )
-
-from devtools import debug
 
 # challenge = eval_challenges["963f59bc"]
 # challenge = eval_challenges["d47aa2ff"]

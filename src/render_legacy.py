@@ -1,10 +1,11 @@
 import base64
-from code.prompts.colors import color_map
 from io import BytesIO
 
 import attrs
 import numpy as np
 from PIL import Image
+
+from src.prompts.colors import color_map
 
 invalid_color = (255, 255, 255)  # White
 

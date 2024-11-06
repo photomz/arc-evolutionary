@@ -3,13 +3,14 @@ import io
 import os
 import re
 import typing as T
-from code.models import Model, ModelUsage
 
 import google.generativeai as genai
 import PIL.Image
 from anthropic import AsyncAnthropic
 from devtools import debug
 from openai import AsyncAzureOpenAI, AsyncOpenAI
+
+from src.models import Model, ModelUsage
 
 anthropic_client = AsyncAnthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 openai_client = AsyncOpenAI(api_key=os.environ["OPENAI_API_KEY"])

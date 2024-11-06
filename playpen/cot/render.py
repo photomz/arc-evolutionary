@@ -1,11 +1,12 @@
 import base64
-from code.prompts.colors import color_map
 from io import BytesIO
 
 import attrs
 import numpy as np
 from devtools import debug
 from PIL import Image
+
+from src.prompts.colors import color_map
 
 # Define the exact color scheme (0-9) as RGB tuples
 
