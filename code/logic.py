@@ -29,6 +29,7 @@ from code.prompts.examples import (
 )
 from code.render_legacy import grid_to_base64_png_oai_content
 from code.reps import array_to_str, grid_diffs_to_ascii, grid_to_ascii
+from code.run_python import run_python_transform
 from copy import deepcopy
 
 import numpy as np
@@ -105,7 +106,7 @@ def content_from_challenge(
             )
 
     # TODO for now, only do the first test... Will have to treat these multi tests as multiple examples later
-    assert len(challenge.test) == 1
+    # assert len(challenge.test) == 1
     content.extend(
         content_blocks_from_matrix(
             matrix=challenge.test[0].input,
@@ -526,9 +527,23 @@ async def run_tree(
     return _all_attempts
 
 
+def get_grids_from_attempt(attempt: Attempt) -> list[GRID]:
+    challenge = attempt.challenge
+    if len(challenge.test) == 1:
+        return [attempt.test_attempt]
+    transform_results = run_python_transform(
+        code=attempt.python_code_str,
+        grid_lists=[deepcopy(test.input) for test in challenge.test],
+        timeout=5,
+        raise_exception=True,
+    )
+    print(f"FINAL: Transform results took {transform_results.latency_ms:.2f} ms")
+    return transform_results.transform_results
+
+
 async def solve_challenge(
     tree: list[RootAttemptConfig], challenge: Challenge
-) -> tuple[GRID, GRID]:
+) -> tuple[list[GRID], list[GRID]]:
     # DFS tree, so always exit early if we find a solution (works for all examples)
 
     run_id = f"run_{random_string(10)}"
@@ -552,7 +567,12 @@ async def solve_challenge(
     if len(top_two) == 1:
         top_two.append(top_two[0])
 
-    top_two[0].plot(ignore_fixing=True)
-    top_two[1].plot(ignore_fixing=True)
+    first_solution = top_two[0]
+    second_solution = top_two[1]
 
-    return top_two[0].test_attempt, top_two[1].test_attempt
+    first_solution.plot(ignore_fixing=True)
+    second_solution.plot(ignore_fixing=True)
+
+    return get_grids_from_attempt(first_solution), get_grids_from_attempt(
+        second_solution
+    )
