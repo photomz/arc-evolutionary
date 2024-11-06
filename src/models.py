@@ -16,6 +16,8 @@ from tqdm import tqdm
 from src.db import init_db_pool, pool
 from src.prompts import prompts
 
+DOUBLE_ENTER = "\n\n"
+
 GRID = list[list[int]]
 
 
@@ -462,7 +464,7 @@ class Attempt(BaseModel):
                 if challenge_train_output.shape == fix_train_attempt_np.shape:
                     diff_str = (
                         f"## Color changes between the Expected Output ASCII and your Transformed Output:"
-                        f"\n\n{grid_diffs_to_ascii(grid_input=challenge_train_output, grid_output=fix_train_attempt_np, separator='|')}"
+                        f"{DOUBLE_ENTER}{grid_diffs_to_ascii(grid_input=challenge_train_output, grid_output=fix_train_attempt_np, separator='|')}"
                     )
                 else:
                     diff_str = ""
@@ -472,7 +474,7 @@ class Attempt(BaseModel):
                     incorrect_str = """Your `transform` function was correct on this example! Think about why it worked on this and not others."""
                 else:
                     incorrect_str = f"""
-# Incorrect Transformed Output ASCII representation:\n\n{grid_to_ascii(grid=fix_train_attempt_np)}
+# Incorrect Transformed Output ASCII representation:{DOUBLE_ENTER}{grid_to_ascii(grid=fix_train_attempt_np)}
 
 {diff_str.strip()}
                     """
@@ -480,9 +482,9 @@ class Attempt(BaseModel):
                 ss = f"""
 # Example {example_i}:
 
-# Input ASCII representation:\n\n{grid_to_ascii(grid=challenge_train_input)}
+# Input ASCII representation:{DOUBLE_ENTER}{grid_to_ascii(grid=challenge_train_input)}
 
-# Expected Output ASCII representation:\n\n{grid_to_ascii(grid=challenge_train_output)}
+# Expected Output ASCII representation:{DOUBLE_ENTER}{grid_to_ascii(grid=challenge_train_output)}
 
 {incorrect_str.strip()}
                 """
@@ -494,7 +496,7 @@ class Attempt(BaseModel):
 </response>
 
 ### The results of using your `transform` function on each example:
-{'\n\n'.join(ss_list)}
+{DOUBLE_ENTER.join(ss_list)}
                 """
             attempt_strs.append(s.strip())
 
@@ -523,7 +525,7 @@ I have asked you this same question before. I am showing you many of your attemp
 
 Here are the examples that have failed:
 
-{'\n\n'.join(attempt_strs)}
+{DOUBLE_ENTER.join(attempt_strs)}
 
 Recall that you should start by reasoning to determine what the issue is in {reasoning_tag_str} tags. Also recall that the problem could be a bug in the code and/or an issue with your previous understanding of the transformation rule.{typical_issue_text}
 
@@ -625,7 +627,7 @@ Once you are done reasoning, rewrite the code to fix the issue. Return the code 
                 if grid_input_temp.shape == grid_output_temp.shape:
                     diff_str = (
                         f"## Color changes between the Input and Output ASCII representation:"
-                        f"\n\n{grid_diffs_to_ascii(grid_input=grid_input_temp, grid_output=grid_output_temp, separator='|')}\n\n"
+                        f"{DOUBLE_ENTER}{grid_diffs_to_ascii(grid_input=grid_input_temp, grid_output=grid_output_temp, separator='|')}{DOUBLE_ENTER}"
                     )
                 else:
                     diff_str = ""
@@ -634,17 +636,17 @@ Once you are done reasoning, rewrite the code to fix the issue. Return the code 
             s = f"""
 # Example {wrong_attempt['ind']}:
 
-# Input ASCII representation:\n\n{grid_to_ascii(grid=np.array(wrong_attempt['input']))}\n\n
+# Input ASCII representation:{DOUBLE_ENTER}{grid_to_ascii(grid=np.array(wrong_attempt['input']))}{DOUBLE_ENTER}
 
-# Incorrect Transformed Output ASCII representation:\n\n{grid_to_ascii(grid=np.array(wrong_attempt['attempt']))}\n\n
+# Incorrect Transformed Output ASCII representation:{DOUBLE_ENTER}{grid_to_ascii(grid=np.array(wrong_attempt['attempt']))}{DOUBLE_ENTER}
 
-# Expected Output ASCII representation:\n\n{grid_to_ascii(grid=np.array(wrong_attempt['output']))}\n\n
+# Expected Output ASCII representation:{DOUBLE_ENTER}{grid_to_ascii(grid=np.array(wrong_attempt['output']))}{DOUBLE_ENTER}
 
 {diff_str}
                 """
             wrong_attempt_strs.append(s.strip())
 
-        wrong_attempt_str = "\n\n".join(wrong_attempt_strs)
+        wrong_attempt_str = DOUBLE_ENTER.join(wrong_attempt_strs)
 
         reasoning_tag_str = (
             "<fix_reasoning></fix_reasoning>"
@@ -669,7 +671,7 @@ You'll need to carefully reason to determine the issue and to determine how to f
 
 Here are the examples that have failed:
 
-{wrong_attempt_str}\n\n
+{wrong_attempt_str}{DOUBLE_ENTER}
 
 Ok, that is all of the actual and expected outputs.
 
