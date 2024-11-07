@@ -84,7 +84,7 @@ async def get_next_message(
                         del content["image_url"]
 
         retry_count = 0
-        max_retries = 6
+        max_retries = 12
         while True:
             try:
                 message = await anthropic_client.beta.prompt_caching.messages.create(
