@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import io
 import os
@@ -6,7 +7,7 @@ import typing as T
 
 import google.generativeai as genai
 import PIL.Image
-from anthropic import AsyncAnthropic
+from anthropic import AsyncAnthropic, RateLimitError
 from devtools import debug
 from openai import AsyncAzureOpenAI, AsyncOpenAI
 
@@ -81,15 +82,30 @@ async def get_next_message(
                             "type": "base64",
                         }
                         del content["image_url"]
-        message = await anthropic_client.beta.prompt_caching.messages.create(
-            system=system_messages,
-            temperature=temperature,
-            max_tokens=8_192,
-            messages=messages,
-            model=model.value,
-            extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
-            timeout=120,
-        )
+
+        retry_count = 0
+        max_retries = 6
+        while True:
+            try:
+                message = await anthropic_client.beta.prompt_caching.messages.create(
+                    system=system_messages,
+                    temperature=temperature,
+                    max_tokens=8_192,
+                    messages=messages,
+                    model=model.value,
+                    extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
+                    timeout=120,
+                )
+                break  # Success, exit the loop
+            except RateLimitError:
+                print(
+                    f"Rate limit error, retrying in 30 seconds ({retry_count}/{max_retries})..."
+                )
+                retry_count += 1
+                if retry_count >= max_retries:
+                    raise  # Re-raise the exception after max retries
+                await asyncio.sleep(15)  # Wait for 30 seconds before retrying
+
         return message.content[-1].text, ModelUsage(
             cache_creation_input_tokens=message.usage.cache_creation_input_tokens,
             cache_read_input_tokens=message.usage.cache_read_input_tokens,

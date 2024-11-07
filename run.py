@@ -62,7 +62,7 @@ async def run() -> None:
         solutions_path="test_data/eval_solutions.json",
         tree=small_claude_tree,
         limit=3,
-        # only_run_ids={"12997ef3"},
+        only_run_ids={"4cd1b7b2"},
     )
 
 
