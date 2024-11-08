@@ -31,7 +31,7 @@ big_claude_tree: list[RootAttemptConfig] = [
         fixes=[],
     ),
     RootAttemptConfig(
-        attempts=250,
+        attempts=200,
         llm_config=LLMConfig(
             model=Model.claude_3_5_sonnet,
             temperature=0.95,
