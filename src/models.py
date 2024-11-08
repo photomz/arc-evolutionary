@@ -462,7 +462,11 @@ class Attempt(BaseModel):
             for example_i, fix_train_attempt in enumerate(fix.train_attempts):
                 challenge_train_input = np.array(challenge.train[example_i].input)
                 challenge_train_output = np.array(challenge.train[example_i].output)
-                fix_train_attempt_np = np.array(fix_train_attempt)
+                try:
+                    fix_train_attempt_np = np.array(fix_train_attempt)
+                except Exception as e:
+                    logfire.debug(f"FAILED TO CONVERT TO ARRAY: {e}")
+                    break
 
                 if challenge_train_output.shape == fix_train_attempt_np.shape:
                     diff_str = (

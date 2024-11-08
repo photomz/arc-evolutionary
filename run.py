@@ -36,6 +36,7 @@ async def run_from_json(
 
     solutions_d: dict[str, list[ChallengeSolution]] = {}
     for challenge_id, challenge in challenges.items():
+        print(f"solving challenge {challenge_id}")
         first_solutions, second_solutions = await solve_challenge(
             challenge=challenge, tree=tree
         )
@@ -68,7 +69,7 @@ async def run() -> None:
         solutions_path="test_data/eval_solutions.json",
         tree=small_claude_tree,
         limit=1,
-        only_run_ids={"4cd1b7b2"},
+        only_run_ids={"0934a4d8"},
     )
 
 
@@ -94,10 +95,10 @@ def evaluate_solutions(attempts_solutions_path: str, truth_solutions_path: str) 
 
 async def main() -> None:
     await run()
-    # evaluate_solutions(
-    #     attempts_solutions_path="test_data/eval_solutions.json",
-    #     truth_solutions_path="arc-prize-2024/arc-agi_evaluation_solutions.json",
-    # )
+    evaluate_solutions(
+        attempts_solutions_path="test_data/eval_solutions.json",
+        truth_solutions_path="arc-prize-2024/arc-agi_evaluation_solutions.json",
+    )
 
 
 if __name__ == "__main__":
