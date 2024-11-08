@@ -472,7 +472,11 @@ class Attempt(BaseModel):
                 else:
                     diff_str = ""
 
-                is_correct = (challenge_train_output == fix_train_attempt_np).all()
+                try:
+                    is_correct = (challenge_train_output == fix_train_attempt_np).all()
+                except Exception as e:
+                    logfire.debug(f"Error with is correct: {e}")
+                    is_correct = False
                 if is_correct:
                     incorrect_str = """Your `transform` function was correct on this example! Think about why it worked on this and not others."""
                 else:
