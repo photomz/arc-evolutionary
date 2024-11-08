@@ -6,6 +6,7 @@ import re
 import typing as T
 
 import google.generativeai as genai
+import logfire
 import PIL.Image
 from anthropic import AsyncAnthropic, RateLimitError
 from devtools import debug
@@ -98,7 +99,7 @@ async def get_next_message(
                 )
                 break  # Success, exit the loop
             except RateLimitError:
-                print(
+                logfire.debug(
                     f"Rate limit error, retrying in 30 seconds ({retry_count}/{max_retries})..."
                 )
                 retry_count += 1
@@ -325,7 +326,7 @@ def clean_code(s: str) -> str:
 
 def parse_python_backticks(s: str) -> str:
     if s.count("```python") == 0:
-        print("NO CODE BLOCKS")
+        logfire.debug("NO CODE BLOCKS")
         out = s.partition("</reasoning>")[2]
         if out == "":
             return noop_code
@@ -346,10 +347,10 @@ def parse_python_backticks(s: str) -> str:
 
     attempted_search = re.search(r"```python\n(.*)\n`", s, re.DOTALL | re.MULTILINE)
     if attempted_search is not None:
-        print("PARSE ERROR CASE (1)")
+        logfire.debug("PARSE ERROR CASE (1)")
         return clean_code(attempted_search.group(1))
     else:
-        print("PARSE ERROR CASE (2!)")
+        logfire.debug("PARSE ERROR CASE (2!)")
 
     return clean_code(s.partition("```python")[2])
 

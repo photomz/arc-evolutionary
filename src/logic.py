@@ -3,10 +3,11 @@ import time
 import typing as T
 from copy import deepcopy
 
+import logfire
 import numpy as np
-from devtools import debug
 from tqdm.asyncio import tqdm_asyncio
 
+from src import PLOT
 from src.data import training_challenges
 from src.models import (
     GRID,
@@ -259,9 +260,9 @@ def eval_attempts(
                 attempt.plot(ignore_fixing=True)
                 took = time.time() - start
                 if took > 0.5:
-                    print(f"TOOK {took} SECONDS TO PLOT")
+                    logfire.debug(f"TOOK {took} SECONDS TO PLOT")
             except Exception as e:
-                print(f"FAILED TO PLOT: {e}")
+                logfire.debug(f"FAILED TO PLOT: {e}")
 
     # get total accuracies
     avg_train_accuracy = sum(attempt.train_accuracy for attempt in attempts) / len(
@@ -275,14 +276,28 @@ def eval_attempts(
     total_correct = len(
         [a for a in attempts if a.test_accuracy == 1 and a.train_accuracy == 1]
     )
-    debug(
-        total_runs,
-        total_correct,
-        avg_train_accuracy,
-        avg_test_accuracy,
-        total_cost,
-        config.prompt_config,
-        config.llm_config,
+    debug_d = {
+        "challenge_id": attempts[0].challenge.id,
+        "total_runs": total_runs,
+        "total_correct": total_correct,
+        "avg_train_accuracy": avg_train_accuracy,
+        "avg_test_accuracy": avg_test_accuracy,
+        "total_cost": total_cost,
+        "prompt_config": config.prompt_config,
+        "llm_config": config.llm_config,
+    }
+    logfire.debug("eval", **debug_d)
+    print(
+        {
+            "challenge_id": attempts[0].challenge.id,
+            "total_runs": total_runs,
+            "total_correct": total_correct,
+            "avg_train_accuracy": avg_train_accuracy,
+            "avg_test_accuracy": avg_test_accuracy,
+            "total_cost": total_cost,
+            "prompt_config": config.prompt_config.model_dump(mode="json"),
+            "llm_config": config.llm_config.model_dump(mode="json"),
+        }
     )
 
 
@@ -429,12 +444,8 @@ async def run_fixes_tree(
                 ]
             )
             start_eval = time.time()
-            eval_attempts(
-                attempts=local_attempts,
-                config=fix_attempt_config,
-                plot=bool(int(os.environ.get("PLOT", 0))),
-            )
-            print(f"eval took {(time.time() - start_eval)} secs")
+            eval_attempts(attempts=local_attempts, config=fix_attempt_config, plot=PLOT)
+            logfire.debug(f"eval took {(time.time() - start_eval)} secs")
             all_attempts.extend(local_attempts)
             # now see if you have a solution
             attempts_with_perfect_train_accuracy = [
@@ -490,16 +501,14 @@ async def run_tree(
             i = i + 1
         local_attempts.extend(
             a
-            for a in await tqdm_asyncio.gather(*tasks, desc="Processing root attempts")
+            for a in await tqdm_asyncio.gather(
+                *tasks, desc=f"Processing root attempts for {challenge.id}"
+            )
             if a
         )
         start_eval = time.time()
-        eval_attempts(
-            attempts=local_attempts,
-            config=root_attempt_config,
-            plot=bool(int(os.environ.get("PLOT", 0))),
-        )
-        print(f"eval took {(time.time() - start_eval)} secs")
+        eval_attempts(attempts=local_attempts, config=root_attempt_config, plot=PLOT)
+        logfire.debug(f"eval took {(time.time() - start_eval)} secs")
         all_attempts.extend(local_attempts)
         # now see if you have a solution
         attempts_with_perfect_train_accuracy = [
@@ -538,7 +547,9 @@ def get_grids_from_attempt(attempt: Attempt) -> list[GRID]:
         timeout=5,
         raise_exception=True,
     )
-    print(f"FINAL: Transform results took {transform_results.latency_ms:.2f} ms")
+    logfire.debug(
+        f"FINAL: Transform results took {transform_results.latency_ms:.2f} ms"
+    )
     return transform_results.transform_results
 
 
@@ -571,8 +582,9 @@ async def solve_challenge(
     first_solution = top_two[0]
     second_solution = top_two[1]
 
-    first_solution.plot(ignore_fixing=True)
-    second_solution.plot(ignore_fixing=True)
+    if PLOT:
+        first_solution.plot(ignore_fixing=True)
+        second_solution.plot(ignore_fixing=True)
 
     return get_grids_from_attempt(first_solution), get_grids_from_attempt(
         second_solution

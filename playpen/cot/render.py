@@ -63,7 +63,6 @@ def create_rgb_grid(
     # Fill in the cells with the appropriate colors
     for i in range(height):
         for j in range(width):
-            debug(grid[i, j])
             color = color_map[grid[i, j]].hex
             start_row = i * (cell_size + edge_size) + edge_size
             start_col = j * (cell_size + edge_size) + edge_size
@@ -143,7 +142,6 @@ def grid_to_base64_png(
     should_highlight: np.ndarray | None = None,
     lower_right_triangle: np.ndarray | None = None,
 ) -> str:
-    debug("HIHI")
     image = grid_to_pil(
         grid,
         render_args=render_args,

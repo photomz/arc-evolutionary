@@ -2,6 +2,7 @@ import asyncio
 import json
 from pathlib import Path
 
+import logfire
 from devtools import debug
 from pydantic import BaseModel, TypeAdapter
 
@@ -47,7 +48,12 @@ async def run_from_json(
                 )
             )
         # just write after each challenge in case program crashes
-
+        logfire.debug(
+            "solution",
+            challenge_id=challenge_id,
+            challenge=challenge,
+            solutions_d=solutions_d,
+        )
         open(solutions_path, "w").write(
             TypeAdapter(dict[str, list[ChallengeSolution]])
             .dump_json(solutions_d)
@@ -61,7 +67,7 @@ async def run() -> None:
         challenges_path="arc-prize-2024/arc-agi_evaluation_challenges.json",
         solutions_path="test_data/eval_solutions.json",
         tree=small_claude_tree,
-        limit=3,
+        limit=1,
         only_run_ids={"4cd1b7b2"},
     )
 
@@ -83,15 +89,15 @@ def evaluate_solutions(attempts_solutions_path: str, truth_solutions_path: str) 
             elif attempt_grids.attempt_2 == truth_grid:
                 correct_count = correct_count + 1
 
-    debug(total_count, correct_count)
+    print("total count", total_count, "correct count", correct_count)
 
 
 async def main() -> None:
-    # await run()
-    evaluate_solutions(
-        attempts_solutions_path="test_data/eval_solutions.json",
-        truth_solutions_path="arc-prize-2024/arc-agi_evaluation_solutions.json",
-    )
+    await run()
+    # evaluate_solutions(
+    #     attempts_solutions_path="test_data/eval_solutions.json",
+    #     truth_solutions_path="arc-prize-2024/arc-agi_evaluation_solutions.json",
+    # )
 
 
 if __name__ == "__main__":

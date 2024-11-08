@@ -8,6 +8,7 @@ from copy import deepcopy
 from enum import Enum
 from pathlib import Path
 
+import logfire
 import numpy as np
 from devtools import debug
 from pydantic import BaseModel, computed_field
@@ -278,7 +279,7 @@ class Attempt(BaseModel):
                             num_right += 1
                 return num_right / (rows * cols)
             except Exception as e:
-                print(f"in percent right from grids: {e=}")
+                logfire.debug(f"in percent right from grids: {e=}")
                 return 0
 
         avg_right_lst: list[float] = []
@@ -332,14 +333,16 @@ class Attempt(BaseModel):
                 timeout=5,
                 raise_exception=True,
             )
-            print(f"Transform results took {transform_results.latency_ms:.2f} ms")
+            logfire.debug(
+                f"Transform results took {transform_results.latency_ms:.2f} ms"
+            )
             test_grid = transform_results.transform_results[0]
             train_grids = transform_results.transform_results[1:]
         else:
             python_str = None
             lists = parse_2d_arrays_from_string(s=llm_response)
             if not lists:
-                print("LLM RESPONSE: ", llm_response)
+                logfire.debug(f"LLM RESPONSE: {llm_response}")
                 raise ValueError("No arrays found in output")
             test_grid = lists[-1]
             train_grids = [[[-1, -1], [-1, -1]]] * len(challenge.train)
@@ -579,8 +582,10 @@ Once you are done reasoning, rewrite the code to fix the issue. Return the code 
                 attempt_config=attempt_config,
             )
         except Exception as e:
-            print(f"ERROR getting next message or extracting python string: {e=}")
-            traceback.print_exc()
+            logfire.debug(
+                f"ERROR getting next message or extracting python string: {e=}"
+            )
+            logfire.debug(traceback.format_exc())
             if raise_exception:
                 raise e
             return None
@@ -622,7 +627,7 @@ Once you are done reasoning, rewrite the code to fix the issue. Return the code 
                 try:
                     grid_output_temp = np.array(wrong_attempt["attempt"])
                 except Exception as e:
-                    print(f"FAILED TO CONVERT TO ARRAY: {e}")
+                    logfire.debug(f"FAILED TO CONVERT TO ARRAY: {e}")
                     return None
                 if grid_input_temp.shape == grid_output_temp.shape:
                     diff_str = (
@@ -706,8 +711,10 @@ Once you are done reasoning, rewrite the code to fix the issue. Return the code 
             attempt.fixing = self
             return attempt
         except Exception as e:
-            print(f"ERROR getting next message or extracting python string: {e=}")
-            traceback.print_exc()
+            logfire.debug(
+                f"ERROR getting next message or extracting python string: {e=}"
+            )
+            logfire.debug(traceback.format_exc())
             if raise_exception:
                 raise e
             return None
