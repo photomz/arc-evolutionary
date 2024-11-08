@@ -291,12 +291,8 @@ def eval_attempts(
         {
             "challenge_id": attempts[0].challenge.id,
             "total_runs": total_runs,
-            "total_correct": total_correct,
             "avg_train_accuracy": avg_train_accuracy,
-            "avg_test_accuracy": avg_test_accuracy,
             "total_cost": total_cost,
-            "prompt_config": config.prompt_config.model_dump(mode="json"),
-            "llm_config": config.llm_config.model_dump(mode="json"),
         }
     )
 
