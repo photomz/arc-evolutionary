@@ -405,9 +405,9 @@ async def run_fixes_tree(
             unique_output=edge.k_top_config.unique_output,
         )
         for fix_attempt_config in edge.configs:
-            print(
-                f"running fix node with {fix_attempt_config.attempts * len(best_k)} total attempts."
-            )
+            message = f"running fix node with {fix_attempt_config.attempts * len(best_k)} total attempts."
+            print(message)
+            logfire.debug(message)
             if fix_attempt_config.attempts == 0:
                 continue
             local_attempts: list[Attempt] = []
@@ -496,9 +496,9 @@ async def run_tree(
 
     all_attempts: list[Attempt] = []
     for root_attempt_config in tree:
-        print(
-            f"[{challenge.id}] running root node with {root_attempt_config.attempts} attempts."
-        )
+        message = f"[{challenge.id}] running root node with {root_attempt_config.attempts} attempts."
+        print(message)
+        logfire.debug(message)
         local_attempts: list[Attempt] = []
         if warm_cache_root:
             first_attempt = await Attempt.run(
@@ -537,6 +537,7 @@ async def run_tree(
         eval_attempts(attempts=local_attempts, config=root_attempt_config, plot=PLOT)
         logfire.debug(f"eval took {(time.time() - start_eval)} secs")
         all_attempts.extend(local_attempts)
+
         # now see if you have a solution
         attempts_with_perfect_train_accuracy = [
             a for a in all_attempts if a.train_accuracy == 1
@@ -555,6 +556,16 @@ async def run_tree(
                 warm_cache=warm_cache_fix,
             )
         )
+
+        # now see if you have a solution
+        attempts_with_perfect_train_accuracy = [
+            a for a in all_attempts if a.train_accuracy == 1
+        ]
+        if len(attempts_with_perfect_train_accuracy) >= 2:
+            message = f"found 2 solutions with {len(attempts_with_perfect_train_accuracy)} attempts"
+            logfire.debug(message)
+            print(message)
+            return all_attempts
 
     # remove duplicates
     has_seen: set[str] = set()
