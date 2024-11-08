@@ -545,7 +545,18 @@ Once you are done reasoning, rewrite the code to fix the issue. Return the code 
             use_array=True,
         )
         messages.append(deepcopy(fixing[0].messages[-1]))
-        messages.append({"role": "user", "content": pool_fix_prompt})
+        messages.append(
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "text": pool_fix_prompt,
+                        "type": "text",
+                        "cache_control": {"type": "ephemeral"},
+                    }
+                ],
+            }
+        )
         return messages
 
     @classmethod
