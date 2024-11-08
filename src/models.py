@@ -556,15 +556,13 @@ Once you are done reasoning, rewrite the code to fix the issue. Return the code 
         messages.append(
             {
                 "role": "user",
-                "content": [
-                    {
-                        "text": pool_fix_prompt,
-                        "type": "text",
-                        "cache_control": {"type": "ephemeral"},
-                    }
-                ],
+                "content": [{"text": pool_fix_prompt, "type": "text"}],
             }
         )
+
+        if str(messages).count("cache_control") < 4:
+            messages[-1]["content"][-1]["cache_control"] = {"type": "ephemeral"}
+
         return messages
 
     @classmethod
@@ -710,15 +708,11 @@ Once you are done reasoning, rewrite the code to fix the issue. Return the code 
         messages.append(
             {
                 "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": prompt,
-                        "cache_control": {"type": "ephemeral"},
-                    }
-                ],
+                "content": [{"type": "text", "text": prompt}],
             }
         )
+        if str(messages).count("cache_control") < 4:
+            messages[-1]["content"][-1]["cache_control"] = {"type": "ephemeral"}
 
         try:
             # debug(attempt_config)
