@@ -18,4 +18,4 @@ else:
 
 import logfire
 
-logfire.configure()
+logfire.configure(inspect_arguments=False)
