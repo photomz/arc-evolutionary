@@ -695,7 +695,7 @@ Once you are done reasoning, rewrite the code to fix the issue. Return the code 
                     {
                         "type": "text",
                         "text": prompt,
-                        # "cache_control": {"type": "ephemeral"},
+                        "cache_control": {"type": "ephemeral"},
                     }
                 ],
             }
