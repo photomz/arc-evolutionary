@@ -596,7 +596,7 @@ Once you are done reasoning, rewrite the code to fix the issue. Return the code 
             logfire.debug(
                 f"ERROR getting next message or extracting python string: {e=}"
             )
-            logfire.debug(traceback.format_exc())
+            logfire.debug("traceback", traceback=traceback.format_exc())
             if raise_exception:
                 raise e
             return None
@@ -725,7 +725,7 @@ Once you are done reasoning, rewrite the code to fix the issue. Return the code 
             logfire.debug(
                 f"ERROR getting next message or extracting python string: {e=}"
             )
-            logfire.debug(traceback.format_exc())
+            logfire.debug("traceback", traceback=traceback.format_exc())
             if raise_exception:
                 raise e
             return None
