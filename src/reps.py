@@ -168,16 +168,16 @@ def spreadsheet_ascii_grid_by_color_diffs(
     return out
 
 
-import attrs
+# import attrs
 
 
-@attrs.frozen
+# @attrs.frozen
 class StdoutStderr:
     stdout: str
     stderr: str
 
 
-@attrs.frozen
+# @attrs.frozen
 class RenderArgs:
     cell_size: int = 40
     use_border: bool = False
@@ -189,7 +189,7 @@ class RenderArgs:
     # avoid_edge_around_border: bool = False
 
 
-@attrs.frozen
+# @attrs.frozen
 class DisplayArgs:
     render_args: RenderArgs = RenderArgs()
     use_diff_highlight: bool = False

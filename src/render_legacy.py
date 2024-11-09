@@ -1,7 +1,7 @@
 import base64
 from io import BytesIO
 
-import attrs
+# import attrs
 import numpy as np
 from PIL import Image
 
@@ -15,7 +15,7 @@ white = (255, 255, 255)  # White
 highlight_color = (255, 0, 0)  # Red
 
 
-@attrs.frozen
+# @attrs.frozen
 class RenderArgs:
     cell_size: int = 40
     use_border: bool = False

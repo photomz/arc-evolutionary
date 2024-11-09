@@ -1,12 +1,18 @@
 import asyncio
 import json
+import os
 from pathlib import Path
 
 from pydantic import BaseModel, TypeAdapter
 
 from src import logfire
 from src.data import build_challenges
-from src.logic import solve_challenge
+from src.logic import (
+    CacheData,
+    random_string,
+    solve_challenge,
+    solve_challenge_background,
+)
 from src.models import GRID
 from src.trees.prod import (
     RootAttemptConfig,
@@ -41,8 +47,13 @@ async def run_from_json(
     solutions_d: dict[str, list[ChallengeSolution]] = {}
     for challenge_id, challenge in challenges.items():
         print(f"[{challenge_id}] starting challenge...")
-        first_solutions, second_solutions = await solve_challenge(
-            challenge=challenge, tree=tree
+        first_solutions, second_solutions = await solve_challenge_background(
+            challenge=challenge,
+            tree=tree,
+            cache_data=CacheData(
+                redis_dsn=os.environ["REDIS_DSN"],
+                run_id=random_string(),
+            ),
         )
         solutions_d[challenge_id] = []
         for i in range(len(first_solutions)):
@@ -72,7 +83,7 @@ async def run() -> None:
         challenges_path="arc-prize-2024/arc-agi_evaluation_challenges.json",
         solutions_path="test_data/eval_solutions.json",
         tree=fast_claude_tree,
-        limit=None,
+        limit=1,
         # only_run_ids={},
     )
 

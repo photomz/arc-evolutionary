@@ -1,9 +1,13 @@
+import json
 import os
 import time
 import typing as T
 from copy import deepcopy
+from enum import Enum
 
 import numpy as np
+import redis.asyncio as redis
+from pydantic import BaseModel
 from tqdm.asyncio import tqdm_asyncio
 
 from src import PLOT, logfire
@@ -657,3 +661,98 @@ async def solve_challenge(
     return get_grids_from_attempt(first_solution), get_grids_from_attempt(
         second_solution
     )
+
+
+class CacheData(BaseModel):
+    redis_dsn: str
+    run_id: str
+
+
+class ChallengeStatus(str, Enum):
+    queued = "queued"
+    running = "running"
+    errored = "errored"
+    done = "done"
+
+
+class ChallengeItem(BaseModel):
+    status: ChallengeStatus
+    queued_at_ms: float
+    started_at_ms: float | None
+    errored_at_ms: float | None
+    done_at_ms: float | None
+    solution_attempts: tuple[list[GRID], list[GRID]] | None
+    last_ping_at_ms: float | None
+
+
+async def solve_challenge_background(
+    tree: list[RootAttemptConfig], challenge: Challenge, cache_data: CacheData
+) -> tuple[list[GRID], list[GRID]]:
+    redis_client = redis.Redis.from_url(cache_data.redis_dsn)
+
+    # confirm it hasn't already been done or solved
+    key = f"{cache_data.run_id}:{challenge.id}"
+    challenge_item = await redis_client.get(key)
+    if not challenge_item:
+        now = time.time() * 1000
+        challenge_item = ChallengeItem(
+            status=ChallengeStatus.running,
+            queued_at_ms=now,
+            started_at_ms=now,
+            errored_at_ms=None,
+            done_at_ms=None,
+            solution_attempts=None,
+            last_ping_at_ms=now,
+        )
+    else:
+        challenge_item = ChallengeItem.model_validate_json(challenge_item)
+        if challenge_item.status not in [
+            ChallengeStatus.queued,
+            ChallengeStatus.errored,
+        ]:
+            raise Exception(f"Invalid challenge status: {challenge_item.status.value}")
+        now = time.time() * 1000
+        challenge_item = ChallengeItem(
+            status=ChallengeStatus.running,
+            queued_at_ms=challenge_item.queued_at_ms,
+            started_at_ms=now,
+            errored_at_ms=challenge_item.errored_at_ms,
+            done_at_ms=challenge_item.done_at_ms,
+            solution_attempts=challenge_item.solution_attempts,
+            last_ping_at_ms=now,
+        )
+
+    await redis_client.set(key, challenge_item.model_dump_json())
+    try:
+        solution_attempts = await solve_challenge(tree=tree, challenge=challenge)
+        challenge_item = ChallengeItem.model_validate_json(await redis_client.get(key))
+        now = time.time() * 1000
+        await redis_client.set(
+            key,
+            ChallengeItem(
+                status=ChallengeStatus.done,
+                queued_at_ms=challenge_item.queued_at_ms,
+                started_at_ms=challenge_item.started_at_ms,
+                errored_at_ms=challenge_item.errored_at_ms,
+                done_at_ms=now,
+                solution_attempts=solution_attempts,
+                last_ping_at_ms=now,
+            ).model_dump_json(),
+        )
+        return solution_attempts
+    except Exception as e:
+        print(f"ERROR CATCHING ATTEMPTS: {e=}")
+        now = time.time() * 1000
+        await redis_client.set(
+            key,
+            ChallengeItem(
+                status=ChallengeStatus.errored,
+                queued_at_ms=challenge_item.queued_at_ms,
+                started_at_ms=challenge_item.started_at_ms,
+                errored_at_ms=now,
+                done_at_ms=challenge_item.done_at_ms,
+                solution_attempts=challenge_item.solution_attempts,
+                last_ping_at_ms=now,
+            ).model_dump_json(),
+        )
+        raise e
