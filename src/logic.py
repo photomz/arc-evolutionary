@@ -1,6 +1,7 @@
 import json
 import os
 import time
+import traceback
 import typing as T
 from copy import deepcopy
 from enum import Enum
@@ -695,7 +696,7 @@ async def solve_challenge_background(
     url: str = None,
 ) -> tuple[list[GRID], list[GRID]]:
     if url:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=3600) as client:
             r = await client.post(
                 url,
                 json={
@@ -768,7 +769,7 @@ async def solve_challenge_background(
         )
         return solution_attempts
     except Exception as e:
-        print(f"ERROR CATCHING ATTEMPTS: {e=}")
+        print(f"ERROR CATCHING ATTEMPTS: {e=}, {traceback.format_exc()}")
         now = time.time() * 1000
         await redis_client.set(
             key,
