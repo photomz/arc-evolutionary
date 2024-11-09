@@ -14,21 +14,8 @@ from openai import AsyncAzureOpenAI, AsyncOpenAI
 from src import logfire
 from src.models import Model, ModelUsage
 
-nvidia_client = AsyncOpenAI(
-    base_url="https://integrate.api.nvidia.com/v1", api_key=os.environ["NVIDIA_API_KEY"]
-)
-groq_client = AsyncOpenAI(
-    base_url="https://api.groq.com/openai/v1", api_key=os.environ["GROQ_API_KEY"]
-)
-openrouter_client = AsyncOpenAI(
-    base_url="https://openrouter.ai/api/v1", api_key=os.environ["OPENROUTER_API_KEY"]
-)
-azure_client = AsyncAzureOpenAI(
-    api_key=os.environ["AZURE_OPENAI_API_KEY"],
-    api_version="2024-10-01-preview",
-    azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
-)
-genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+if "GEMINI_API_KEY" in os.environ:
+    genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
 
 def text_only_messages(messages: list[dict[str, T.Any]]) -> list[dict[str, T.Any]]:
@@ -128,6 +115,10 @@ async def get_next_message(
             output_tokens=message.usage.completion_tokens,
         )
     elif model == Model.nvidia_llama_3_1_nemotron_70b_instruct:
+        nvidia_client = AsyncOpenAI(
+            base_url="https://integrate.api.nvidia.com/v1",
+            api_key=os.environ["NVIDIA_API_KEY"],
+        )
         message = await nvidia_client.chat.completions.create(
             model=model.value,
             messages=text_only_messages(messages),
@@ -145,6 +136,10 @@ async def get_next_message(
             output_tokens=message.usage.completion_tokens,
         )
     elif model == Model.groq_llama_3_2_90b_vision:
+        groq_client = AsyncOpenAI(
+            base_url="https://api.groq.com/openai/v1",
+            api_key=os.environ["GROQ_API_KEY"],
+        )
         message = await groq_client.chat.completions.create(
             model=model.value,
             messages=text_only_messages(messages),
@@ -162,6 +157,10 @@ async def get_next_message(
             output_tokens=message.usage.completion_tokens,
         )
     elif model == Model.openrouter_claude_3_5_sonnet:
+        openrouter_client = AsyncOpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=os.environ["OPENROUTER_API_KEY"],
+        )
         message = await openrouter_client.chat.completions.create(
             model=model.value,
             messages=messages,
@@ -179,6 +178,10 @@ async def get_next_message(
             output_tokens=message.usage.completion_tokens,
         )
     elif model == Model.openrouter_o1:
+        openrouter_client = AsyncOpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=os.environ["OPENROUTER_API_KEY"],
+        )
         message = await openrouter_client.chat.completions.create(
             model=model.value,
             messages=messages,
@@ -196,6 +199,10 @@ async def get_next_message(
             output_tokens=message.usage.completion_tokens,
         )
     elif model == Model.openrouter_o1_mini:
+        openrouter_client = AsyncOpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=os.environ["OPENROUTER_API_KEY"],
+        )
         message = await openrouter_client.chat.completions.create(
             model=model.value,
             messages=messages,
@@ -212,24 +219,12 @@ async def get_next_message(
             input_tokens=message.usage.prompt_tokens - cached_tokens,
             output_tokens=message.usage.completion_tokens,
         )
-    elif model == Model.azure_gpt_4o:
-        message = await azure_client.chat.completions.create(
-            model=model.value.replace("azure-", ""),
-            messages=messages,
-            temperature=temperature,
-            max_tokens=10_000,
+    elif model == [Model.azure_gpt_4o, Model.azure_gpt_4o_mini]:
+        azure_client = AsyncAzureOpenAI(
+            api_key=os.environ["AZURE_OPENAI_API_KEY"],
+            api_version="2024-10-01-preview",
+            azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
         )
-        if message.usage.prompt_tokens_details:
-            cached_tokens = message.usage.prompt_tokens_details.cached_tokens
-        else:
-            cached_tokens = 0
-        return message.choices[0].message.content, ModelUsage(
-            cache_creation_input_tokens=0,
-            cache_read_input_tokens=cached_tokens,
-            input_tokens=message.usage.prompt_tokens - cached_tokens,
-            output_tokens=message.usage.completion_tokens,
-        )
-    elif model == Model.azure_gpt_4o_mini:
         message = await azure_client.chat.completions.create(
             model=model.value.replace("azure-", ""),
             messages=messages,
