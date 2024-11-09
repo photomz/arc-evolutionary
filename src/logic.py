@@ -686,8 +686,14 @@ class ChallengeItem(BaseModel):
 
 
 async def solve_challenge_background(
-    tree: list[RootAttemptConfig], challenge: Challenge, cache_data: CacheData
+    tree: list[RootAttemptConfig],
+    challenge: Challenge,
+    cache_data: CacheData,
+    environ_data: dict[str, str],
 ) -> tuple[list[GRID], list[GRID]]:
+    for k, v in environ_data.items():
+        os.environ[k] = v
+
     redis_client = redis.Redis.from_url(cache_data.redis_dsn)
 
     # confirm it hasn't already been done or solved

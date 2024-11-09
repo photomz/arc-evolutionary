@@ -14,8 +14,6 @@ from openai import AsyncAzureOpenAI, AsyncOpenAI
 from src import logfire
 from src.models import Model, ModelUsage
 
-anthropic_client = AsyncAnthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-openai_client = AsyncOpenAI(api_key=os.environ["OPENAI_API_KEY"])
 nvidia_client = AsyncOpenAI(
     base_url="https://integrate.api.nvidia.com/v1", api_key=os.environ["NVIDIA_API_KEY"]
 )
@@ -64,6 +62,7 @@ async def get_next_message(
             output_tokens=0,
         )
     if model in [Model.claude_3_5_sonnet, Model.claude_3_5_haiku]:
+        anthropic_client = AsyncAnthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
         if messages[0]["role"] == "system":
             system_messages = messages[0]["content"]
             messages = messages[1:]
@@ -113,21 +112,8 @@ async def get_next_message(
             input_tokens=message.usage.input_tokens,
             output_tokens=message.usage.output_tokens,
         )
-    elif model == Model.gpt_4o:
-        message = await openai_client.chat.completions.create(
-            model=model.value,
-            messages=messages,
-            temperature=temperature,
-            max_tokens=10_000,
-        )
-        cached_tokens = message.usage.prompt_tokens_details.cached_tokens
-        return message.choices[0].message.content, ModelUsage(
-            cache_creation_input_tokens=0,
-            cache_read_input_tokens=cached_tokens,
-            input_tokens=message.usage.prompt_tokens - cached_tokens,
-            output_tokens=message.usage.completion_tokens,
-        )
-    elif model == Model.gpt_4o_mini:
+    elif model in [Model.gpt_4o, Model.gpt_4o_mini]:
+        openai_client = AsyncOpenAI(api_key=os.environ["OPENAI_API_KEY"])
         message = await openai_client.chat.completions.create(
             model=model.value,
             messages=messages,

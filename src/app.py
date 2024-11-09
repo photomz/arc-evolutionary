@@ -18,8 +18,11 @@ async def read_root():
 
 @app.post("/solve_challenge", response_model=tuple[list[GRID], list[GRID]])
 async def solve_challenge(
-    tree: list[RootAttemptConfig], challenge: Challenge, cache_data: CacheData
+    tree: list[RootAttemptConfig],
+    challenge: Challenge,
+    cache_data: CacheData,
+    environ_data: dict[str, str],
 ) -> tuple[list[GRID], list[GRID]]:
     return await solve_challenge_background(
-        tree=tree, challenge=challenge, cache_data=cache_data
+        tree=tree, challenge=challenge, cache_data=cache_data, environ_data=environ_data
     )
