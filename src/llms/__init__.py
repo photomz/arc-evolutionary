@@ -6,12 +6,12 @@ import re
 import typing as T
 
 import google.generativeai as genai
-import logfire
 import PIL.Image
 from anthropic import AsyncAnthropic, RateLimitError
 from devtools import debug
 from openai import AsyncAzureOpenAI, AsyncOpenAI
 
+from src import logfire
 from src.models import Model, ModelUsage
 
 anthropic_client = AsyncAnthropic(api_key=os.environ["ANTHROPIC_API_KEY"])

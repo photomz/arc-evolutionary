@@ -2,14 +2,18 @@ import asyncio
 import json
 from pathlib import Path
 
-import logfire
-from devtools import debug
 from pydantic import BaseModel, TypeAdapter
 
+from src import logfire
 from src.data import build_challenges
 from src.logic import solve_challenge
 from src.models import GRID
-from src.trees.prod import RootAttemptConfig, big_claude_tree, small_claude_tree
+from src.trees.prod import (
+    RootAttemptConfig,
+    big_claude_tree,
+    fast_claude_tree,
+    small_claude_tree,
+)
 
 
 class ChallengeSolution(BaseModel):
@@ -36,7 +40,7 @@ async def run_from_json(
 
     solutions_d: dict[str, list[ChallengeSolution]] = {}
     for challenge_id, challenge in challenges.items():
-        print(f"solving challenge {challenge_id}")
+        print(f"[{challenge_id}] starting challenge...")
         first_solutions, second_solutions = await solve_challenge(
             challenge=challenge, tree=tree
         )
@@ -53,7 +57,7 @@ async def run_from_json(
             "solution",
             challenge_id=challenge_id,
             challenge=challenge,
-            solutions_d=solutions_d,
+            solution_d=solutions_d[challenge_id],
         )
         open(solutions_path, "w").write(
             TypeAdapter(dict[str, list[ChallengeSolution]])
@@ -67,9 +71,9 @@ async def run() -> None:
         # challenges_path="test_data/challenges.json",
         challenges_path="arc-prize-2024/arc-agi_evaluation_challenges.json",
         solutions_path="test_data/eval_solutions.json",
-        tree=small_claude_tree,
-        limit=1,
-        only_run_ids={"0934a4d8"},
+        tree=fast_claude_tree,
+        limit=None,
+        # only_run_ids={},
     )
 
 

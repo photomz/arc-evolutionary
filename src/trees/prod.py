@@ -11,6 +11,7 @@ from src.models import (
     RootPromptConfig,
 )
 
+## BIG CLAUDE TREE:
 # C reasoning 50
 # C reasoning 200
 # - fix C reasoning 100
@@ -27,6 +28,190 @@ from src.models import (
 # -- fix 4o reasoning 50
 
 # MAX: 1175
+
+
+## FAST_CLAUDE_TREE:
+# C reasoning 50
+# C reasoning 300
+# - fix C reasoning 100
+# -- fix C reasoning 100
+# --- fix C reasoning 100
+# - fix C reasoning POOL 25
+# -- fix C reasoning POOL 25
+
+# MAX: 700
+
+
+fast_claude_tree: list[RootAttemptConfig] = [
+    RootAttemptConfig(
+        attempts=50,
+        llm_config=LLMConfig(
+            model=Model.claude_3_5_sonnet,
+            temperature=0.95,
+        ),
+        prompt_config=RootPromptConfig(
+            base_prompt=Prompt.REASONING,
+            use_examples=True,
+            use_diffs=True,
+            use_images=True,
+            use_ascii=True,
+            use_array=True,
+            use_image=True,
+        ),
+        fixes=[],
+    ),
+    RootAttemptConfig(
+        attempts=300,
+        llm_config=LLMConfig(
+            model=Model.claude_3_5_sonnet,
+            temperature=0.95,
+        ),
+        prompt_config=RootPromptConfig(
+            base_prompt=Prompt.REASONING,
+            use_examples=True,
+            use_diffs=True,
+            use_images=True,
+            use_ascii=True,
+            use_array=True,
+            use_image=True,
+        ),
+        fixes=[
+            AttemptEdge(
+                k_top_config=KTopConfig(
+                    k_top=10, unique_code=False, unique_output=False
+                ),
+                configs=[
+                    FixAttemptConfig(
+                        attempts=10,
+                        llm_config=LLMConfig(
+                            model=Model.claude_3_5_sonnet,
+                            temperature=0.95,
+                        ),
+                        prompt_config=FixPromptConfig(
+                            base_prompt=Prompt.REASONING,
+                            use_ascii=True,
+                            use_array=True,
+                            use_image=True,
+                            use_fix_reasoning_tags=True,
+                            use_fix_fail_line=True,
+                            use_typical_issue_text=True,
+                            include_diffs=True,
+                        ),
+                        fixes=[
+                            AttemptEdge(
+                                k_top_config=KTopConfig(
+                                    k_top=10, unique_code=False, unique_output=False
+                                ),
+                                configs=[
+                                    FixAttemptConfig(
+                                        attempts=10,
+                                        llm_config=LLMConfig(
+                                            model=Model.claude_3_5_sonnet,
+                                            temperature=0.95,
+                                        ),
+                                        prompt_config=FixPromptConfig(
+                                            base_prompt=Prompt.REASONING,
+                                            use_ascii=True,
+                                            use_array=True,
+                                            use_image=True,
+                                            use_fix_reasoning_tags=True,
+                                            use_fix_fail_line=True,
+                                            use_typical_issue_text=True,
+                                            include_diffs=True,
+                                        ),
+                                        fixes=[
+                                            AttemptEdge(
+                                                k_top_config=KTopConfig(
+                                                    k_top=10,
+                                                    unique_code=False,
+                                                    unique_output=False,
+                                                ),
+                                                configs=[
+                                                    FixAttemptConfig(
+                                                        attempts=10,
+                                                        llm_config=LLMConfig(
+                                                            model=Model.claude_3_5_sonnet,
+                                                            temperature=0.95,
+                                                        ),
+                                                        prompt_config=FixPromptConfig(
+                                                            base_prompt=Prompt.REASONING,
+                                                            use_ascii=True,
+                                                            use_array=True,
+                                                            use_image=True,
+                                                            use_fix_reasoning_tags=True,
+                                                            use_fix_fail_line=True,
+                                                            use_typical_issue_text=True,
+                                                            include_diffs=True,
+                                                        ),
+                                                        fixes=[],
+                                                    )
+                                                ],
+                                            )
+                                        ],
+                                    )
+                                ],
+                            )
+                        ],
+                    )
+                ],
+            ),
+            AttemptEdge(
+                pooling=(PoolingConfig(size=4)),
+                k_top_config=KTopConfig(
+                    k_top=5, unique_code=False, unique_output=False
+                ),
+                configs=[
+                    FixAttemptConfig(
+                        attempts=5,
+                        llm_config=LLMConfig(
+                            model=Model.claude_3_5_sonnet,
+                            temperature=0.95,
+                        ),
+                        prompt_config=FixPromptConfig(
+                            base_prompt=Prompt.REASONING,
+                            use_ascii=True,
+                            use_array=True,
+                            use_image=True,
+                            use_fix_reasoning_tags=True,
+                            use_fix_fail_line=True,
+                            use_typical_issue_text=True,
+                            include_diffs=True,
+                        ),
+                        fixes=[
+                            AttemptEdge(
+                                pooling=(PoolingConfig(size=3)),
+                                k_top_config=KTopConfig(
+                                    k_top=5, unique_code=False, unique_output=False
+                                ),
+                                configs=[
+                                    FixAttemptConfig(
+                                        attempts=5,
+                                        llm_config=LLMConfig(
+                                            model=Model.claude_3_5_sonnet,
+                                            temperature=0.95,
+                                        ),
+                                        prompt_config=FixPromptConfig(
+                                            base_prompt=Prompt.REASONING,
+                                            use_ascii=True,
+                                            use_array=True,
+                                            use_image=True,
+                                            use_fix_reasoning_tags=True,
+                                            use_fix_fail_line=True,
+                                            use_typical_issue_text=True,
+                                            include_diffs=True,
+                                        ),
+                                        fixes=[],
+                                    )
+                                ],
+                            )
+                        ],
+                    )
+                ],
+            ),
+        ],
+    ),
+]
+
 
 big_claude_tree: list[RootAttemptConfig] = [
     RootAttemptConfig(
@@ -366,6 +551,7 @@ big_claude_tree: list[RootAttemptConfig] = [
         ],
     ),
 ]
+
 
 # max attempts: 350
 small_claude_tree: list[RootAttemptConfig] = [

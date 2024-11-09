@@ -1,7 +1,8 @@
 import os
 
 import asyncpg
-import logfire
+
+from src import logfire
 
 pool: asyncpg.pool.Pool | None = None
 

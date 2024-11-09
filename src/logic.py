@@ -3,11 +3,10 @@ import time
 import typing as T
 from copy import deepcopy
 
-import logfire
 import numpy as np
 from tqdm.asyncio import tqdm_asyncio
 
-from src import PLOT
+from src import PLOT, logfire
 from src.data import training_challenges
 from src.models import (
     GRID,
@@ -264,7 +263,10 @@ def challenge_to_messages(
 
 
 def eval_attempts(
-    attempts: list[Attempt], config: RootAttemptConfig | FixAttemptConfig, plot: bool
+    attempts: list[Attempt],
+    config: RootAttemptConfig | FixAttemptConfig,
+    plot: bool,
+    time_took_ms: float,
 ) -> None:
     if not attempts:
         return None
@@ -302,6 +304,7 @@ def eval_attempts(
         "total_cost": total_cost,
         "prompt_config": config.prompt_config,
         "llm_config": config.llm_config,
+        "time_took_ms": round(time_took_ms, 2),
     }
     logfire.debug("eval", **debug_d)
     print(
@@ -310,6 +313,7 @@ def eval_attempts(
             "total_runs": total_runs,
             "avg_train_accuracy": avg_train_accuracy,
             "total_cost": total_cost,
+            "time_took_ms": round(time_took_ms, 2),
         },
     )
 
@@ -404,8 +408,11 @@ async def run_fixes_tree(
             unique_code=edge.k_top_config.unique_code,
             unique_output=edge.k_top_config.unique_output,
         )
+        if not best_k:
+            continue
         for fix_attempt_config in edge.configs:
-            message = f"running fix node with {fix_attempt_config.attempts * len(best_k)} total attempts."
+            start_level = time.time()
+            message = f"[{best_k[0].challenge.id}] running fix node with {fix_attempt_config.attempts * len(best_k)} total attempts."
             print(message)
             logfire.debug(message)
             if fix_attempt_config.attempts == 0:
@@ -462,7 +469,13 @@ async def run_fixes_tree(
                 ]
             )
             start_eval = time.time()
-            eval_attempts(attempts=local_attempts, config=fix_attempt_config, plot=PLOT)
+            took_level = time.time() - start_level
+            eval_attempts(
+                attempts=local_attempts,
+                config=fix_attempt_config,
+                plot=PLOT,
+                time_took_ms=(took_level * 1000),
+            )
             logfire.debug(f"eval took {(time.time() - start_eval)} secs")
             all_attempts.extend(local_attempts)
             # now see if you have a solution
@@ -470,7 +483,7 @@ async def run_fixes_tree(
                 a for a in all_attempts if a.train_accuracy == 1
             ]
             if len(attempts_with_perfect_train_accuracy) >= 2:
-                message = f"found 2 solutions with {len(attempts_with_perfect_train_accuracy)} attempts"
+                message = f"[{attempts_with_perfect_train_accuracy[0].challenge.id}] found 2 solutions with {len(attempts_with_perfect_train_accuracy)} attempts"
                 logfire.debug(message)
                 print(message)
                 return all_attempts
@@ -486,6 +499,17 @@ async def run_fixes_tree(
     return all_attempts
 
 
+def dedup_attempts(attempts: list[Attempt]) -> list[Attempt]:
+    has_seen: set[str] = set()
+    _all_attempts = []
+    for a in attempts:
+        if a.id not in has_seen:
+            _all_attempts.append(a)
+        has_seen.add(a.id)
+
+    return _all_attempts
+
+
 async def run_tree(
     tree: list[RootAttemptConfig],
     challenge: Challenge,
@@ -496,6 +520,7 @@ async def run_tree(
 
     all_attempts: list[Attempt] = []
     for root_attempt_config in tree:
+        start_level = time.time()
         message = f"[{challenge.id}] running root node with {root_attempt_config.attempts} attempts."
         print(message)
         logfire.debug(message)
@@ -534,9 +559,16 @@ async def run_tree(
             )
 
         start_eval = time.time()
-        eval_attempts(attempts=local_attempts, config=root_attempt_config, plot=PLOT)
+        took_level = time.time() - start_level
+        eval_attempts(
+            attempts=local_attempts,
+            config=root_attempt_config,
+            plot=PLOT,
+            time_took_ms=(took_level * 1000),
+        )
         logfire.debug(f"eval took {(time.time() - start_eval)} secs")
         all_attempts.extend(local_attempts)
+        all_attempts = dedup_attempts(all_attempts)
 
         # now see if you have a solution
         attempts_with_perfect_train_accuracy = [
@@ -556,6 +588,7 @@ async def run_tree(
                 warm_cache=warm_cache_fix,
             )
         )
+        all_attempts = dedup_attempts(all_attempts)
 
         # now see if you have a solution
         attempts_with_perfect_train_accuracy = [
@@ -567,15 +600,7 @@ async def run_tree(
             print(message)
             return all_attempts
 
-    # remove duplicates
-    has_seen: set[str] = set()
-    _all_attempts = []
-    for a in all_attempts:
-        if a.id not in has_seen:
-            _all_attempts.append(a)
-        has_seen.add(a.id)
-
-    return _all_attempts
+    return dedup_attempts(all_attempts)
 
 
 def get_grids_from_attempt(attempt: Attempt) -> list[GRID]:
@@ -605,6 +630,8 @@ async def solve_challenge(
     attempts = await run_tree(
         tree=tree, challenge=challenge, warm_cache_root=True, warm_cache_fix=False
     )
+    attempts = dedup_attempts(attempts)
+
     ended_at_ms = time.time() * 1000
 
     if os.environ.get("NEON_DB_DSN"):

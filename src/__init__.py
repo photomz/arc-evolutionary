@@ -1,21 +1,55 @@
+import logging
 import os
+import typing as T
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
-if not os.getenv("LOGFIRE_TOKEN"):
-    os.environ["LOGFIRE_TOKEN"] = "y0hVmLsPlMSDSbQlGH2NB1lQ71DblNkM5p6lnB0VrZdY"
+if not os.getenv("PRINT_LOGS") or os.environ["PRINT_LOGS"] == "0":
+    PRINT_LOGS = False
+else:
+    PRINT_LOGS = True
 
-if not os.getenv("NEON_DB_DSN"):
-    os.environ["NEON_DB_DSN"] = (
-        "postgresql://kaggle:mQh7DRLvVX4z@ep-dawn-dawn-a4zd48ba-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require"
-    )
+
+class LogfireDummy:
+    def __init__(self):
+        self.logger = logging.getLogger("LogfireDummy")
+        self.logger.setLevel(logging.DEBUG)
+        handler = logging.FileHandler("logs.txt")
+        formatter = logging.Formatter(
+            "%(asctime)s EST: %(message)s", datefmt="%Y-%m-%d %I:%M:%S %p"
+        )
+        handler.setFormatter(formatter)
+        self.logger.addHandler(handler)
+
+    def debug(
+        self,
+        msg_template: str,
+        /,
+        **attributes: T.Any,
+    ) -> None:
+        try:
+            s = msg_template
+            if attributes:
+                s = f"{s}\n\n{attributes}"
+            if PRINT_LOGS:
+                print(f"LOGGER: {s}")
+            else:
+                self.logger.debug(s)
+        except Exception:
+            pass
+
+
+if os.getenv("LOGFIRE_TOKEN"):
+    import logfire
+
+    logfire.configure(inspect_arguments=True)
+else:
+    logfire = LogfireDummy()
+
+
 if not os.getenv("PLOT") or os.environ["PLOT"] == "0":
     PLOT = False
 else:
     PLOT = True
-
-import logfire
-
-logfire.configure(inspect_arguments=True)

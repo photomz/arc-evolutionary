@@ -8,12 +8,12 @@ from copy import deepcopy
 from enum import Enum
 from pathlib import Path
 
-import logfire
 import numpy as np
 from devtools import debug
 from pydantic import BaseModel, computed_field
 from tqdm import tqdm
 
+from src import logfire
 from src.db import init_db_pool, pool
 from src.prompts import prompts
 
