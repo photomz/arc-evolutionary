@@ -19,6 +19,7 @@ from src.trees.prod import (
     big_claude_tree,
     fast_claude_tree,
     small_claude_tree,
+    tiny_claude_tree,
 )
 
 
@@ -58,7 +59,7 @@ async def run_from_json(
                 "OPENAI_API_KEY": os.environ["OPENAI_API_KEY"],
                 "ANTHROPIC_API_KEY": os.environ["ANTHROPIC_API_KEY"],
             },
-            url=os.environ["SERVER_URL"],
+            # url=os.environ["SERVER_URL"],
         )
         solutions_d[challenge_id] = []
         for i in range(len(first_solutions)):
@@ -87,9 +88,9 @@ async def run() -> None:
         # challenges_path="test_data/challenges.json",
         challenges_path="arc-prize-2024/arc-agi_evaluation_challenges.json",
         solutions_path="test_data/eval_solutions.json",
-        tree=fast_claude_tree,
+        tree=tiny_claude_tree,
         limit=1,
-        # only_run_ids={},
+        only_run_ids={"aa4ec2a5"},
     )
 
 

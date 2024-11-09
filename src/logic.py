@@ -427,54 +427,41 @@ async def run_fixes_tree(
             local_attempts: list[Attempt] = []
             tasks = []
             for parent_attempt in best_k:
-                for _ in range(fix_attempt_config.attempts):
-                    if not edge.pooling:
-                        tasks.append(
-                            parent_attempt.fix(
-                                attempt_config=fix_attempt_config.model_copy(deep=True),
-                                raise_exception=False,
-                            )
+                if not edge.pooling:
+                    tasks.append(
+                        parent_attempt.fix_many(
+                            attempt_config=fix_attempt_config.model_copy(deep=True),
+                            raise_exception=False,
+                            n_times=fix_attempt_config.attempts,
                         )
-                        """
-                        tasks.append(
-                            Attempt.run(
-                                challenge=parent_attempt.challenge,
-                                attempt_config=fix_attempt_config.model_copy(deep=True),
-                                raise_exception=False,
-                                fixing=[parent_attempt],
-                            )
-                        )
-                        """
-                    else:
-                        # get the pool of attempts
-                        # get diversity of correct examples here...
-                        attempts_to_use = get_diverse_attempts(
-                            root_attempt=parent_attempt,
-                            sorted_attempts=get_best_attempts(
-                                attempts=parent_attempts,
-                                k_top=100_000,
-                                unique_code=edge.k_top_config.unique_code,
-                                unique_output=edge.k_top_config.unique_output,
-                            ),
-                            limit=edge.pooling.size,
-                        )
-                        tasks.append(
-                            Attempt.run(
-                                challenge=parent_attempt.challenge,
-                                attempt_config=fix_attempt_config.model_copy(deep=True),
-                                raise_exception=False,
-                                fixing=attempts_to_use,
-                            )
-                        )
-            local_attempts.extend(
-                [
-                    a
-                    for a in await tqdm_asyncio.gather(
-                        *tasks, desc="Processing fix attempts", file=TqdmLogfire()
                     )
-                    if a
-                ]
+                else:
+                    attempts_to_use = get_diverse_attempts(
+                        root_attempt=parent_attempt,
+                        sorted_attempts=get_best_attempts(
+                            attempts=parent_attempts,
+                            k_top=100_000,
+                            unique_code=edge.k_top_config.unique_code,
+                            unique_output=edge.k_top_config.unique_output,
+                        ),
+                        limit=edge.pooling.size,
+                    )
+                    tasks.append(
+                        Attempt.run_many(
+                            challenge=parent_attempt.challenge,
+                            attempt_config=fix_attempt_config.model_copy(deep=True),
+                            raise_exception=False,
+                            fixing=attempts_to_use,
+                            n_times=fix_attempt_config.attempts,
+                        )
+                    )
+
+            responses = await tqdm_asyncio.gather(
+                *tasks, desc="Processing fix attempts", file=TqdmLogfire()
             )
+            for r in responses:
+                local_attempts.extend(r)
+
             start_eval = time.time()
             took_level = time.time() - start_level
             eval_attempts(
@@ -531,6 +518,7 @@ async def run_tree(
         message = f"[{challenge.id}] running root node with {root_attempt_config.attempts} attempts."
         print(message)
         logfire.debug(message)
+        """
         local_attempts: list[Attempt] = []
         if warm_cache_root:
             first_attempt = await Attempt.run(
@@ -552,7 +540,6 @@ async def run_tree(
                     fixing=[],
                 )
             )
-
         task_chunks = chunk_list(lst=tasks, n=100)
         for i, task_chunk in enumerate(task_chunks):
             local_attempts.extend(
@@ -564,7 +551,14 @@ async def run_tree(
                 )
                 if a
             )
-
+        """
+        local_attempts = await Attempt.run_many(
+            challenge=challenge,
+            attempt_config=root_attempt_config,
+            raise_exception=False,
+            fixing=[],
+            n_times=root_attempt_config.attempts,
+        )
         start_eval = time.time()
         took_level = time.time() - start_level
         eval_attempts(

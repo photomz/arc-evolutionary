@@ -349,6 +349,70 @@ class Attempt(BaseModel):
 
         return python_str, test_grid, train_grids
 
+    @staticmethod
+    def llm_responses_to_result_grids_list(
+        llm_responses: list[str], challenge: Challenge, returns_python: bool
+    ) -> list[tuple[str | None, GRID, list[GRID]] | None]:
+        result_grids_list: list[tuple[str | None, GRID, list[GRID]] | None] = []
+        for llm_response in llm_responses:
+            try:
+                res = Attempt.llm_response_to_result_grids(
+                    challenge=challenge,
+                    llm_response=llm_response,
+                    returns_python=returns_python,
+                )
+            except Exception as e:
+                logfire.debug(f"FAILED LLM RESPONSE: {e}, {traceback.format_exc()}")
+                res = None
+            result_grids_list.append(res)
+        return result_grids_list
+
+    @classmethod
+    async def from_messages_many(
+        cls,
+        challenge: Challenge,
+        messages: list[dict[str, T.Any]],
+        attempt_config: RootAttemptConfig | FixAttemptConfig,
+        n_times: int,
+    ) -> list["Attempt"]:
+        from src.llms import get_next_messages
+
+        next_messages = await get_next_messages(
+            messages=deepcopy(messages),
+            model=attempt_config.llm_config.model,
+            temperature=attempt_config.llm_config.temperature,
+            n_times=n_times,
+        )
+        grid_lists = cls.llm_responses_to_result_grids_list(
+            llm_responses=[m[0] for m in next_messages],
+            challenge=challenge,
+            returns_python=attempt_config.prompt_config.returns_python,
+        )
+        attempts: list[Attempt] = []
+        for next_message, grid_list in zip(next_messages, grid_lists, strict=True):
+            if grid_list:
+                python_str, test_grid, train_grids = grid_list
+                llm_response, usage = next_message
+                attempts.append(
+                    Attempt(
+                        id=f"{challenge.id}-{random_string()}",
+                        challenge=challenge,
+                        messages=[
+                            *messages,
+                            {
+                                "role": "assistant",
+                                "content": [{"type": "text", "text": llm_response}],
+                            },
+                        ],
+                        python_code_str=python_str,
+                        train_attempts=train_grids,
+                        test_attempt=test_grid,
+                        config=attempt_config,
+                        usage=usage,
+                    )
+                )
+        return attempts
+
     @classmethod
     async def from_messages(
         cls,
@@ -566,6 +630,41 @@ Once you are done reasoning, rewrite the code to fix the issue. Return the code 
         return messages
 
     @classmethod
+    async def run_many(
+        cls,
+        challenge: Challenge,
+        attempt_config: RootAttemptConfig | FixAttemptConfig,
+        raise_exception: bool,
+        fixing: list["Attempt"],
+        n_times: int,
+    ) -> list["Attempt"]:
+        from src.logic import challenge_to_messages
+
+        if not fixing:
+            assert isinstance(attempt_config, RootAttemptConfig)
+            messages = challenge_to_messages(
+                challenge=challenge,
+                add_examples=attempt_config.prompt_config.use_examples,
+                include_diffs=attempt_config.prompt_config.use_diffs,
+                prompt=attempt_config.prompt_config.base_prompt,
+                include_image=attempt_config.prompt_config.use_image,
+                use_ascii=attempt_config.prompt_config.use_ascii,
+                use_array=attempt_config.prompt_config.use_array,
+            )
+        else:
+            assert isinstance(attempt_config, FixAttemptConfig)
+            # TODO check if it is already correct, in which case return
+            messages = cls.messages_from_fixes(
+                challenge=challenge, attempt_config=attempt_config, fixing=fixing
+            )
+        return await cls.from_messages_many(
+            challenge=challenge,
+            messages=messages,
+            attempt_config=attempt_config,
+            n_times=n_times,
+        )
+
+    @classmethod
     async def run(
         cls,
         challenge: Challenge,
@@ -607,13 +706,14 @@ Once you are done reasoning, rewrite the code to fix the issue. Return the code 
                 raise e
             return None
 
-    async def fix(
+    async def fix_many(
         self,
         *,
         attempt_config: FixAttemptConfig,
         return_correct_attempt: bool = True,
         raise_exception: bool,
-    ) -> T.Optional["Attempt"]:
+        n_times: int,
+    ) -> list["Attempt"]:
         from src.reps import grid_diffs_to_ascii, grid_to_ascii
 
         if not isinstance(attempt_config.prompt_config, FixPromptConfig):
@@ -634,7 +734,7 @@ Once you are done reasoning, rewrite the code to fix the issue. Return the code 
 
         if not wrong_attempts:
             if return_correct_attempt:
-                return self
+                return []
             raise Exception("NO WRONG ATTEMPTS, WOOHOOO")
 
         wrong_attempt_strs: list[str] = []
@@ -645,7 +745,7 @@ Once you are done reasoning, rewrite the code to fix the issue. Return the code 
                     grid_output_temp = np.array(wrong_attempt["attempt"])
                 except Exception as e:
                     logfire.debug(f"FAILED TO CONVERT TO ARRAY: {e}")
-                    return None
+                    continue
                 if grid_input_temp.shape == grid_output_temp.shape:
                     diff_str = (
                         f"## Color changes between the Input and Output ASCII representation:"
@@ -711,26 +811,16 @@ Once you are done reasoning, rewrite the code to fix the issue. Return the code 
                 "content": [{"type": "text", "text": prompt}],
             }
         )
-        if str(messages).count("cache_control") < 4:
-            messages[-1]["content"][-1]["cache_control"] = {"type": "ephemeral"}
 
-        try:
-            # debug(attempt_config)
-            attempt = await self.from_messages(
-                challenge=self.challenge,
-                messages=messages,
-                attempt_config=attempt_config,
-            )
+        attempts = await self.from_messages_many(
+            challenge=self.challenge,
+            messages=messages,
+            attempt_config=attempt_config,
+            n_times=n_times,
+        )
+        for attempt in attempts:
             attempt.fixing = self
-            return attempt
-        except Exception as e:
-            logfire.debug(
-                f"ERROR getting next message or extracting python string: {e=}"
-            )
-            logfire.debug("traceback", traceback=traceback.format_exc())
-            if raise_exception:
-                raise e
-            return None
+        return attempts
 
     def plot(self, ignore_fixing: bool) -> None:
         from src.plot import plot_results

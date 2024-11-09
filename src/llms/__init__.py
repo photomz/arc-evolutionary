@@ -3,6 +3,7 @@ import base64
 import io
 import os
 import re
+import time
 import typing as T
 
 import google.generativeai as genai
@@ -12,6 +13,7 @@ from devtools import debug
 from openai import AsyncAzureOpenAI, AsyncOpenAI
 
 from src import logfire
+from src.logic import random_string
 from src.models import Model, ModelUsage
 
 if "GEMINI_API_KEY" in os.environ:
@@ -36,6 +38,114 @@ def text_only_messages(messages: list[dict[str, T.Any]]) -> list[dict[str, T.Any
                 }
             )
     return new_messages
+
+
+async def get_next_message_anthropic(
+    anthropic_client: AsyncAnthropic,
+    system_messages: list[dict[str, T.Any]],
+    messages: list[dict[str, T.Any]],
+    model: Model,
+    temperature: float,
+    retry_secs: int = 15,
+    max_retries: int = 1_000,
+) -> tuple[str, ModelUsage]:
+    retry_count = 0
+    while True:
+        try:
+            request_id = random_string()
+            start = time.time()
+            logfire.debug(f"[{request_id}] calling anthropic")
+            message = await anthropic_client.beta.prompt_caching.messages.create(
+                system=system_messages,
+                temperature=temperature,
+                max_tokens=8_192,
+                messages=messages,
+                model=model.value,
+                extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"},
+                timeout=120,
+            )
+            took_ms = (time.time() - start) * 1000
+            usage = ModelUsage(
+                cache_creation_input_tokens=message.usage.cache_creation_input_tokens,
+                cache_read_input_tokens=message.usage.cache_read_input_tokens,
+                input_tokens=message.usage.input_tokens,
+                output_tokens=message.usage.output_tokens,
+            )
+            logfire.debug(
+                f"[{request_id}] got back anthropic, took {took_ms:.2f}, {usage}"
+            )
+            break  # Success, exit the loop
+        except RateLimitError:
+            logfire.debug(
+                f"Rate limit error, retrying in 15 seconds ({retry_count}/{max_retries})..."
+            )
+            retry_count += 1
+            if retry_count >= max_retries:
+                raise  # Re-raise the exception after max retries
+            await asyncio.sleep(retry_secs)
+
+    return message.content[-1].text, usage
+
+
+async def get_next_messages(
+    *, messages: list[dict[str, T.Any]], model: Model, temperature: float, n_times: int
+) -> list[tuple[str, ModelUsage]]:
+    if n_times <= 0:
+        return []
+    if model in [Model.claude_3_5_sonnet, Model.claude_3_5_haiku]:
+        if model == Model.claude_3_5_haiku:
+            messages = text_only_messages(messages)
+        anthropic_client = AsyncAnthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+        if messages[0]["role"] == "system":
+            system_messages = messages[0]["content"]
+            messages = messages[1:]
+        else:
+            system_messages = []
+        for message in messages:
+            content = message["content"]
+            if isinstance(content, list):
+                for content in message["content"]:
+                    if content["type"] == "image_url":
+                        content["type"] = "image"
+                        content["source"] = {
+                            "data": content["image_url"]["url"].replace(
+                                "data:image/png;base64,", ""
+                            ),
+                            "media_type": "image/png",
+                            "type": "base64",
+                        }
+                        del content["image_url"]
+                    if "cache_control" in content:
+                        del content["cache_control"]
+
+        # remove all the caches except for on the last one
+        if isinstance(messages[-1]["content"], str):
+            messages[-1]["content"] = [
+                {"type": "text", "text": messages[-1]["content"]}
+            ]
+        messages[-1]["content"][-1]["cache_control"] = {"type": "ephemeral"}
+
+        return [
+            await get_next_message_anthropic(
+                anthropic_client=anthropic_client,
+                system_messages=system_messages,
+                messages=messages,
+                model=model,
+                temperature=temperature,
+            ),
+            *await asyncio.gather(
+                *[
+                    get_next_message_anthropic(
+                        anthropic_client=anthropic_client,
+                        system_messages=system_messages,
+                        messages=messages,
+                        model=model,
+                        temperature=temperature,
+                    )
+                    for _ in range(n_times - 1)
+                ]
+            ),
+        ]
 
 
 async def get_next_message(
