@@ -5,9 +5,11 @@ import typing as T
 from copy import deepcopy
 from enum import Enum
 
+import httpx
 import numpy as np
 import redis.asyncio as redis
-from pydantic import BaseModel
+from devtools import debug
+from pydantic import BaseModel, TypeAdapter
 from tqdm.asyncio import tqdm_asyncio
 
 from src import PLOT, logfire
@@ -690,7 +692,26 @@ async def solve_challenge_background(
     challenge: Challenge,
     cache_data: CacheData,
     environ_data: dict[str, str],
+    url: str = None,
 ) -> tuple[list[GRID], list[GRID]]:
+    if url:
+        async with httpx.AsyncClient() as client:
+            r = await client.post(
+                url,
+                json={
+                    "tree": TypeAdapter(list[RootAttemptConfig]).dump_python(
+                        tree, mode="json"
+                    ),
+                    "challenge": Challenge.model_dump(challenge, mode="json"),
+                    "cache_data": cache_data.model_dump(mode="json"),
+                    "environ_data": environ_data,
+                },
+            )
+            j = r.json()
+            debug(j)
+            # TODO run retry logic here?
+        return j
+
     for k, v in environ_data.items():
         os.environ[k] = v
 

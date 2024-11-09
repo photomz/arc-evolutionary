@@ -54,6 +54,11 @@ async def run_from_json(
                 redis_dsn=os.environ["REDIS_DSN"],
                 run_id=random_string(),
             ),
+            environ_data={
+                "OPENAI_API_KEY": os.environ["OPENAI_API_KEY"],
+                "ANTHROPIC_API_KEY": os.environ["ANTHROPIC_API_KEY"],
+            },
+            url=os.environ["SERVER_URL"],
         )
         solutions_d[challenge_id] = []
         for i in range(len(first_solutions)):

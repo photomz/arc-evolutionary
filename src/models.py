@@ -209,7 +209,7 @@ class PoolingConfig(BaseModel):
 class AttemptEdge(BaseModel):
     k_top_config: KTopConfig
     configs: list[FixAttemptConfig]
-    pooling: PoolingConfig = None
+    pooling: PoolingConfig | None = None
 
 
 class Attempt(BaseModel):
