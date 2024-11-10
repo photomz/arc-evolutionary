@@ -154,12 +154,12 @@ async def run() -> None:
         challenges_path="arc-prize-2024/arc-agi_evaluation_challenges.json",
         solutions_path="test_data/eval_solutions.json",
         temp_solutions_dir_path="test_data/tmp_solutions",
-        # tree=prod.one_level_haiku_tree,
-        tree=prod.prod_kaggle_tree,
+        tree=prod.one_level_haiku_tree,
+        # tree=prod.prod_kaggle_tree,
         limit=2,
         max_concurrent=20,
         # limit=None,
-        # only_run_ids={"aa4ec2a5"},
+        only_run_ids={"009d5c81"},
     )
 
 
