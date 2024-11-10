@@ -301,18 +301,23 @@ class Attempt(BaseModel):
             return 1
         return 0
 
+    @staticmethod
+    def cost_cents_from_usage(model: Model, usage: ModelUsage) -> float:
+        model_price = model_price_map[model]
+        return (
+            usage.cache_creation_input_tokens
+            * model_price.cache_create_per_million_cents
+            + usage.cache_read_input_tokens * model_price.cache_read_per_million_cents
+            + usage.input_tokens * model_price.input_tokens_per_million_cents
+            + usage.output_tokens * model_price.output_tokens_per_million_cents
+        ) / 1_000_000
+
     @computed_field
     @property
     def cost_cents(self) -> float:
-        model_price = model_price_map[self.config.llm_config.model]
-        return (
-            self.usage.cache_creation_input_tokens
-            * model_price.cache_create_per_million_cents
-            + self.usage.cache_read_input_tokens
-            * model_price.cache_read_per_million_cents
-            + self.usage.input_tokens * model_price.input_tokens_per_million_cents
-            + self.usage.output_tokens * model_price.output_tokens_per_million_cents
-        ) / 1_000_000
+        return self.cost_cents_from_usage(
+            model=self.config.llm_config.model, usage=self.usage
+        )
 
     @staticmethod
     def llm_response_to_result_grids(
@@ -383,6 +388,9 @@ class Attempt(BaseModel):
             temperature=attempt_config.llm_config.temperature,
             n_times=n_times,
         )
+        if not next_messages:
+            return []
+
         grid_lists = cls.llm_responses_to_result_grids_list(
             llm_responses=[m[0] for m in next_messages],
             challenge=challenge,

@@ -406,6 +406,10 @@ async def run_fixes_tree(
 ) -> list[Attempt]:
     # DFS fixes
     all_attempts: list[Attempt] = []
+    if not parent_attempts:
+        challenge_id = ""
+    else:
+        challenge_id = parent_attempts[0].challenge.id
     if not edges:
         return all_attempts
     for edge in edges:
@@ -457,7 +461,9 @@ async def run_fixes_tree(
                     )
 
             responses = await tqdm_asyncio.gather(
-                *tasks, desc="Processing fix attempts", file=TqdmLogfire()
+                *tasks,
+                desc=f"[{challenge_id}] Processing fix attempts",
+                file=TqdmLogfire(),
             )
             for r in responses:
                 local_attempts.extend(r)
@@ -470,7 +476,9 @@ async def run_fixes_tree(
                 plot=PLOT,
                 time_took_ms=(took_level * 1000),
             )
-            logfire.debug(f"eval took {(time.time() - start_eval)} secs")
+            logfire.debug(
+                f"[{challenge_id}] eval took {(time.time() - start_eval)} secs"
+            )
             all_attempts.extend(local_attempts)
             # now see if you have a solution
             attempts_with_perfect_train_accuracy = [
@@ -490,6 +498,7 @@ async def run_fixes_tree(
                     warm_cache=warm_cache,
                 )
             )
+    logfire.debug(f"ALL ATTEMPTS LEN: {len(all_attempts)}")
     return all_attempts
 
 
@@ -567,7 +576,7 @@ async def run_tree(
             plot=PLOT,
             time_took_ms=(took_level * 1000),
         )
-        logfire.debug(f"eval took {(time.time() - start_eval)} secs")
+        logfire.debug(f"[{challenge.id}] eval took {(time.time() - start_eval)} secs")
         all_attempts.extend(local_attempts)
         all_attempts = dedup_attempts(all_attempts)
 
@@ -576,7 +585,7 @@ async def run_tree(
             a for a in all_attempts if a.train_accuracy == 1
         ]
         if len(attempts_with_perfect_train_accuracy) >= 2:
-            message = f"found 2 solutions with {len(attempts_with_perfect_train_accuracy)} attempts"
+            message = f"[{challenge.id}] found 2 solutions with {len(attempts_with_perfect_train_accuracy)} attempts"
             logfire.debug(message)
             print(message)
             return all_attempts
@@ -596,7 +605,7 @@ async def run_tree(
             a for a in all_attempts if a.train_accuracy == 1
         ]
         if len(attempts_with_perfect_train_accuracy) >= 2:
-            message = f"found 2 solutions with {len(attempts_with_perfect_train_accuracy)} attempts"
+            message = f"[{challenge.id}] found 2 solutions with {len(attempts_with_perfect_train_accuracy)} attempts"
             logfire.debug(message)
             print(message)
             return all_attempts
@@ -615,7 +624,7 @@ def get_grids_from_attempt(attempt: Attempt) -> list[GRID]:
         raise_exception=True,
     )
     logfire.debug(
-        f"FINAL: Transform results took {transform_results.latency_ms:.2f} ms"
+        f"[{challenge.id}] FINAL: Transform results took {transform_results.latency_ms:.2f} ms"
     )
     return transform_results.transform_results
 
@@ -632,6 +641,12 @@ async def solve_challenge(
         tree=tree, challenge=challenge, warm_cache_root=True, warm_cache_fix=False
     )
     attempts = dedup_attempts(attempts)
+
+    # get the number and cost from all of these attempts
+    total_cost_cents = sum(a.cost_cents for a in attempts)
+    logfire.debug(
+        f"[{challenge.id}] DONE: n attempts: {len(attempts)}, total cost cents: {total_cost_cents}"
+    )
 
     ended_at_ms = time.time() * 1000
 

@@ -14,7 +14,7 @@ from openai import AsyncAzureOpenAI, AsyncOpenAI
 
 from src import logfire
 from src.logic import random_string
-from src.models import Model, ModelUsage
+from src.models import Attempt, Model, ModelUsage
 
 if "GEMINI_API_KEY" in os.environ:
     genai.configure(api_key=os.environ["GEMINI_API_KEY"])
@@ -48,7 +48,7 @@ async def get_next_message_anthropic(
     temperature: float,
     retry_secs: int = 15,
     max_retries: int = 1_000,
-) -> tuple[str, ModelUsage]:
+) -> tuple[str, ModelUsage] | None:
     retry_count = 0
     while True:
         try:
@@ -72,7 +72,7 @@ async def get_next_message_anthropic(
                 output_tokens=message.usage.output_tokens,
             )
             logfire.debug(
-                f"[{request_id}] got back anthropic, took {took_ms:.2f}, {usage}"
+                f"[{request_id}] got back anthropic, took {took_ms:.2f}, {usage}, cost_cents={Attempt.cost_cents_from_usage(model=model, usage=usage)}"
             )
             break  # Success, exit the loop
         except RateLimitError:
@@ -81,9 +81,18 @@ async def get_next_message_anthropic(
             )
             retry_count += 1
             if retry_count >= max_retries:
-                raise  # Re-raise the exception after max retries
+                # raise  # Re-raise the exception after max retries
+                return None
             await asyncio.sleep(retry_secs)
-
+        except Exception as e:
+            logfire.debug(
+                f"Other anthropic error: {str(e)}, retrying in 15 seconds ({retry_count}/{max_retries})..."
+            )
+            retry_count += 1
+            if retry_count >= max_retries:
+                # raise  # Re-raise the exception after max retries
+                return None
+            await asyncio.sleep(retry_secs)
     return message.content[-1].text, usage
 
 
@@ -101,6 +110,7 @@ async def get_next_messages(
             messages = messages[1:]
         else:
             system_messages = []
+        cache_control_count = 0
         for message in messages:
             content = message["content"]
             if isinstance(content, list):
@@ -116,7 +126,9 @@ async def get_next_messages(
                         }
                         del content["image_url"]
                     if "cache_control" in content:
-                        del content["cache_control"]
+                        cache_control_count = cache_control_count + 1
+                        if cache_control_count >= 3:
+                            del content["cache_control"]
 
         # remove all the caches except for on the last one
         if isinstance(messages[-1]["content"], str):
@@ -125,7 +137,7 @@ async def get_next_messages(
             ]
         messages[-1]["content"][-1]["cache_control"] = {"type": "ephemeral"}
 
-        return [
+        n_messages = [
             await get_next_message_anthropic(
                 anthropic_client=anthropic_client,
                 system_messages=system_messages,
@@ -146,6 +158,8 @@ async def get_next_messages(
                 ]
             ),
         ]
+        # filter out the Nones
+        return [m for m in n_messages if m]
 
 
 async def get_next_message(

@@ -13,3 +13,4 @@ wheels/
 .env*
 .idea
 logs.txt
+test_data/tmp_solutions*

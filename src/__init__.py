@@ -32,7 +32,7 @@ class LogfireDummy:
         try:
             s = msg_template
             if attributes:
-                s = f"{s}\n\n{attributes}"
+                s = f"{s}\n**{attributes}**\n"
             if PRINT_LOGS:
                 print(f"LOGGER: {s}")
             else:

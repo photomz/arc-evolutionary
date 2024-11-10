@@ -1,6 +1,8 @@
 import asyncio
 import json
 import os
+import time
+import typing as T
 from pathlib import Path
 
 from pydantic import BaseModel, TypeAdapter
@@ -13,14 +15,8 @@ from src.logic import (
     solve_challenge,
     solve_challenge_background,
 )
-from src.models import GRID
-from src.trees.prod import (
-    RootAttemptConfig,
-    big_claude_tree,
-    fast_claude_tree,
-    small_claude_tree,
-    tiny_claude_tree,
-)
+from src.models import GRID, Challenge
+from src.trees import prod
 
 
 class ChallengeSolution(BaseModel):
@@ -28,14 +24,94 @@ class ChallengeSolution(BaseModel):
     attempt_2: GRID
 
 
+async def solve_and_write(
+    solutions_d: dict[str, list[ChallengeSolution]],
+    challenge: Challenge,
+    tree: list[prod.RootAttemptConfig],
+    solutions_dir: Path,
+) -> None:
+    start = time.time()
+    print(f"[{challenge.id}] starting challenge...")
+
+    first_solutions, second_solutions = await solve_challenge(
+        challenge=challenge, tree=tree
+    )
+
+    solutions_d[challenge.id] = []
+    for i in range(len(first_solutions)):
+        solutions_d[challenge.id].append(
+            ChallengeSolution(
+                attempt_1=first_solutions[i],
+                attempt_2=second_solutions[i],
+            )
+        )
+    # just write after each challenge in case program crashes
+    logfire.debug(
+        f"[{challenge.id}] solution",
+        challenge_id=challenge.id,
+        challenge=challenge,
+        solution_d=solutions_d[challenge.id],
+    )
+    open(solutions_dir / f"{challenge.id}.json", "w").write(
+        TypeAdapter(dict[str, list[ChallengeSolution]])
+        .dump_json(solutions_d[challenge.id])
+        .decode("utf-8")
+    )
+    took_secs = time.time() - start
+    logfire.debug(f"[{challenge.id}] took {took_secs:.2f} secs to solve and write")
+
+
+async def process_challenges_with_limit(
+    challenges: list[Challenge],
+    solutions_d: dict[str, list[ChallengeSolution]],
+    tree: list[prod.RootAttemptConfig],
+    solutions_dir: Path,
+    max_concurrent: int,
+) -> list[T.Any]:
+    # Create a semaphore to limit concurrent tasks
+    semaphore = asyncio.Semaphore(max_concurrent)
+
+    async def bounded_solve_and_write(challenge: Challenge) -> None:
+        """
+        Wrapper for solve_and_write that respects the semaphore limit
+        """
+        async with semaphore:
+            try:
+                return await solve_and_write(
+                    solutions_d=solutions_d,
+                    challenge=challenge,
+                    tree=tree,
+                    solutions_dir=solutions_dir,
+                )
+            except Exception as e:
+                logfire.debug(f"Error processing challenge: {e}")
+                raise
+
+    # Create tasks for all challenges
+    tasks = [bounded_solve_and_write(challenge) for challenge in challenges]
+
+    # Run all tasks and gather results
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    # Check for any exceptions in results
+    errors = [r for r in results if isinstance(r, Exception)]
+    if errors:
+        message = f"Encountered {len(errors)} errors during processing"
+        logfire.debug(message)
+        print(message)
+
+    return results
+
+
 async def run_from_json(
     *,
     challenges_path: str,
     solutions_path: str,
-    tree: list[RootAttemptConfig],
+    tree: list[prod.RootAttemptConfig],
     limit: int | None,
     only_run_ids: set[str] = None,
 ) -> None:
+    start = time.time()
     challenges = build_challenges(
         challenges_path=Path(challenges_path), solutions_path=None
     )
@@ -46,41 +122,28 @@ async def run_from_json(
         challenges = {k: challenges[k] for k in list(challenges)[:limit]}
 
     solutions_d: dict[str, list[ChallengeSolution]] = {}
-    for challenge_id, challenge in challenges.items():
-        print(f"[{challenge_id}] starting challenge...")
-        first_solutions, second_solutions = await solve_challenge_background(
-            challenge=challenge,
-            tree=tree,
-            cache_data=CacheData(
-                redis_dsn=os.environ["REDIS_DSN"],
-                run_id=random_string(),
-            ),
-            environ_data={
-                "OPENAI_API_KEY": os.environ["OPENAI_API_KEY"],
-                "ANTHROPIC_API_KEY": os.environ["ANTHROPIC_API_KEY"],
-            },
-            # url=os.environ["SERVER_URL"],
-        )
-        solutions_d[challenge_id] = []
-        for i in range(len(first_solutions)):
-            solutions_d[challenge_id].append(
-                ChallengeSolution(
-                    attempt_1=first_solutions[i],
-                    attempt_2=second_solutions[i],
-                )
-            )
-        # just write after each challenge in case program crashes
-        logfire.debug(
-            "solution",
-            challenge_id=challenge_id,
-            challenge=challenge,
-            solution_d=solutions_d[challenge_id],
-        )
-        open(solutions_path, "w").write(
-            TypeAdapter(dict[str, list[ChallengeSolution]])
-            .dump_json(solutions_d)
-            .decode("utf-8")
-        )
+    # run all challenges in parallel to start
+
+    solutions_dir = Path("test_data/tmp_solutions")
+    solutions_dir.mkdir(exist_ok=True)
+
+    await process_challenges_with_limit(
+        challenges=list(challenges.values()),
+        solutions_d=solutions_d,
+        tree=tree,
+        solutions_dir=solutions_dir,
+        max_concurrent=10,
+    )
+
+    # iterate through solutions dir and load in the solutions? or just use solutions_d
+    open(solutions_path, "w").write(
+        TypeAdapter(dict[str, list[ChallengeSolution]])
+        .dump_json(solutions_d)
+        .decode("utf-8")
+    )
+    message = f"FINAL: took {(time.time() - start):.2f} secs to run {len(challenges)} challenges"
+    logfire.debug(message)
+    print(message)
 
 
 async def run() -> None:
@@ -88,9 +151,10 @@ async def run() -> None:
         # challenges_path="test_data/challenges.json",
         challenges_path="arc-prize-2024/arc-agi_evaluation_challenges.json",
         solutions_path="test_data/eval_solutions.json",
-        tree=tiny_claude_tree,
-        limit=1,
-        only_run_ids={"aa4ec2a5"},
+        tree=prod.one_level_haiku_tree,
+        limit=10,
+        # limit=None,
+        # only_run_ids={"aa4ec2a5"},
     )
 
 
