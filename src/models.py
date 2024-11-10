@@ -428,58 +428,6 @@ class Attempt(BaseModel):
         return attempts
 
     @classmethod
-    async def from_messages(
-        cls,
-        challenge: Challenge,
-        messages: list[dict[str, T.Any]],
-        attempt_config: RootAttemptConfig | FixAttemptConfig,
-    ) -> "Attempt":
-        from src.llms import get_next_message
-
-        random_str = random_string()
-        id = f"{challenge.id}-{random_str}"
-        # create custom color randomly from hash of id
-        color = hashlib.md5(id.encode()).hexdigest()[:6]
-
-        with tqdm(
-            total=2,
-            desc=f"Getting LLM response {random_str}",
-            colour=f"#{color}",
-            leave=False,
-            disable=True,
-        ) as main_pbar:
-            llm_response, usage = await get_next_message(
-                messages=deepcopy(messages),
-                model=attempt_config.llm_config.model,
-                temperature=attempt_config.llm_config.temperature,
-            )
-            main_pbar.update(1)
-            main_pbar.set_description(f"Running transformations {random_str}")
-            python_str, test_grid, train_grids = cls.llm_response_to_result_grids(
-                challenge=challenge,
-                llm_response=llm_response,
-                returns_python=attempt_config.prompt_config.returns_python,
-            )
-            main_pbar.update(1)
-
-        return Attempt(
-            id=id,
-            challenge=challenge,
-            messages=[
-                *messages,
-                {
-                    "role": "assistant",
-                    "content": [{"type": "text", "text": llm_response}],
-                },
-            ],
-            python_code_str=python_str,
-            train_attempts=train_grids,
-            test_attempt=test_grid,
-            config=attempt_config,
-            usage=usage,
-        )
-
-    @classmethod
     def messages_from_fixes(
         cls,
         challenge: Challenge,
@@ -677,48 +625,6 @@ Once you are done reasoning, rewrite the code to fix the issue. Return the code 
             attempt_config=attempt_config,
             n_times=n_times,
         )
-
-    @classmethod
-    async def run(
-        cls,
-        challenge: Challenge,
-        attempt_config: RootAttemptConfig | FixAttemptConfig,
-        raise_exception: bool,
-        fixing: list["Attempt"],
-    ) -> T.Optional["Attempt"]:
-        from src.logic import challenge_to_messages
-
-        if not fixing:
-            assert isinstance(attempt_config, RootAttemptConfig)
-            messages = challenge_to_messages(
-                challenge=challenge,
-                add_examples=attempt_config.prompt_config.use_examples,
-                include_diffs=attempt_config.prompt_config.use_diffs,
-                prompt=attempt_config.prompt_config.base_prompt,
-                include_image=attempt_config.prompt_config.use_image,
-                use_ascii=attempt_config.prompt_config.use_ascii,
-                use_array=attempt_config.prompt_config.use_array,
-            )
-        else:
-            assert isinstance(attempt_config, FixAttemptConfig)
-            # TODO check if it is already correct, in which case return
-            messages = cls.messages_from_fixes(
-                challenge=challenge, attempt_config=attempt_config, fixing=fixing
-            )
-        try:
-            return await cls.from_messages(
-                challenge=challenge,
-                messages=messages,
-                attempt_config=attempt_config,
-            )
-        except Exception as e:
-            logfire.debug(
-                f"ERROR getting next message or extracting python string: {e=}"
-            )
-            logfire.debug("traceback", traceback=traceback.format_exc())
-            if raise_exception:
-                raise e
-            return None
 
     async def fix_many(
         self,
