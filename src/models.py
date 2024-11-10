@@ -382,13 +382,19 @@ class Attempt(BaseModel):
     ) -> list["Attempt"]:
         from src.llms import get_next_messages
 
-        next_messages = await get_next_messages(
-            messages=deepcopy(messages),
-            model=attempt_config.llm_config.model,
-            temperature=attempt_config.llm_config.temperature,
-            n_times=n_times,
-        )
-        if not next_messages:
+        try:
+            next_messages = await get_next_messages(
+                messages=deepcopy(messages),
+                model=attempt_config.llm_config.model,
+                temperature=attempt_config.llm_config.temperature,
+                n_times=n_times,
+            )
+            if not next_messages:
+                return []
+        except Exception as e:
+            logfire.debug(
+                f"[{challenge.id}] BIG PROBLEM***** Error getting next messages: {e}"
+            )
             return []
 
         grid_lists = cls.llm_responses_to_result_grids_list(

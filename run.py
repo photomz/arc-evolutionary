@@ -53,7 +53,7 @@ async def solve_and_write(
         solution_d=solutions_d[challenge.id],
     )
     open(solutions_dir / f"{challenge.id}.json", "w").write(
-        TypeAdapter(dict[str, list[ChallengeSolution]])
+        TypeAdapter(list[ChallengeSolution])
         .dump_json(solutions_d[challenge.id])
         .decode("utf-8")
     )
@@ -152,7 +152,7 @@ async def run() -> None:
         challenges_path="arc-prize-2024/arc-agi_evaluation_challenges.json",
         solutions_path="test_data/eval_solutions.json",
         tree=prod.one_level_haiku_tree,
-        limit=10,
+        limit=1,
         # limit=None,
         # only_run_ids={"aa4ec2a5"},
     )

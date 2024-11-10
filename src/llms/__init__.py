@@ -86,7 +86,7 @@ async def get_next_message_anthropic(
             await asyncio.sleep(retry_secs)
         except Exception as e:
             logfire.debug(
-                f"Other anthropic error: {str(e)}, retrying in 15 seconds ({retry_count}/{max_retries})..."
+                f"Other anthropic error: {str(e)}, retrying in {retry_secs} seconds ({retry_count}/{max_retries})..."
             )
             retry_count += 1
             if retry_count >= max_retries:
@@ -96,9 +96,54 @@ async def get_next_message_anthropic(
     return message.content[-1].text, usage
 
 
+async def get_next_message_openai(
+    openai_client: AsyncOpenAI,
+    messages: list[dict[str, T.Any]],
+    model: Model,
+    temperature: float,
+    retry_secs: int = 15,
+    max_retries: int = 1_000,
+) -> tuple[str, ModelUsage] | None:
+    retry_count = 0
+    while True:
+        try:
+            request_id = random_string()
+            start = time.time()
+            logfire.debug(f"[{request_id}] calling openai")
+            message = await openai_client.chat.completions.create(
+                temperature=temperature,
+                max_tokens=10_000,
+                messages=messages,
+                model=model.value,
+                timeout=120,
+            )
+            took_ms = (time.time() - start) * 1000
+            cached_tokens = message.usage.prompt_tokens_details.cached_tokens
+            usage = ModelUsage(
+                cache_creation_input_tokens=0,
+                cache_read_input_tokens=cached_tokens,
+                input_tokens=message.usage.prompt_tokens - cached_tokens,
+                output_tokens=message.usage.completion_tokens,
+            )
+            logfire.debug(
+                f"[{request_id}] got back openai, took {took_ms:.2f}, {usage}, cost_cents={Attempt.cost_cents_from_usage(model=model, usage=usage)}"
+            )
+            break  # Success, exit the loop
+        except Exception as e:
+            logfire.debug(
+                f"Other openai error: {str(e)}, retrying in {retry_count} seconds ({retry_count}/{max_retries})..."
+            )
+            retry_count += 1
+            if retry_count >= max_retries:
+                # raise  # Re-raise the exception after max retries
+                return None
+            await asyncio.sleep(retry_secs)
+    return message.choices[0].message.content, usage
+
+
 async def get_next_messages(
     *, messages: list[dict[str, T.Any]], model: Model, temperature: float, n_times: int
-) -> list[tuple[str, ModelUsage]]:
+) -> list[tuple[str, ModelUsage]] | None:
     if n_times <= 0:
         return []
     if model in [Model.claude_3_5_sonnet, Model.claude_3_5_haiku]:
@@ -160,6 +205,31 @@ async def get_next_messages(
         ]
         # filter out the Nones
         return [m for m in n_messages if m]
+    elif model in [Model.gpt_4o, Model.gpt_4o_mini]:
+        openai_client = AsyncOpenAI(api_key=os.environ["OPENAI_API_KEY"])
+        n_messages = [
+            await get_next_message_openai(
+                openai_client=openai_client,
+                messages=messages,
+                model=model,
+                temperature=temperature,
+            ),
+            *await asyncio.gather(
+                *[
+                    get_next_message_openai(
+                        openai_client=openai_client,
+                        messages=messages,
+                        model=model,
+                        temperature=temperature,
+                    )
+                    for _ in range(n_times - 1)
+                ]
+            ),
+        ]
+        # filter out the Nones
+        return [m for m in n_messages if m]
+    else:
+        raise ValueError(f"Invalid model: {model}")
 
 
 async def get_next_message(

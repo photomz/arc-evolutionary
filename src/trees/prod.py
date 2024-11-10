@@ -554,9 +554,9 @@ big_claude_tree: list[RootAttemptConfig] = [
 
 one_level_haiku_tree: list[RootAttemptConfig] = [
     RootAttemptConfig(
-        attempts=50,
+        attempts=10,
         llm_config=LLMConfig(
-            model=Model.claude_3_5_sonnet,
+            model=Model.gpt_4o_mini,
             temperature=0.95,
         ),
         prompt_config=RootPromptConfig(
@@ -573,7 +573,7 @@ one_level_haiku_tree: list[RootAttemptConfig] = [
     RootAttemptConfig(
         attempts=100,
         llm_config=LLMConfig(
-            model=Model.claude_3_5_haiku,
+            model=Model.claude_3_5_sonnet,
             temperature=0.95,
         ),
         prompt_config=RootPromptConfig(
