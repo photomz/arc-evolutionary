@@ -337,7 +337,7 @@ class Attempt(BaseModel):
                     deepcopy(challenge.test[0].input),
                     *[deepcopy(train.input) for train in challenge.train],
                 ],
-                timeout=5,
+                timeout=7,
                 raise_exception=True,
             )
             logfire.debug(
