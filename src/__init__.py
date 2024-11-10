@@ -36,7 +36,8 @@ class LogfireDummy:
             if PRINT_LOGS:
                 print(f"LOGGER: {s}")
             else:
-                self.logger.debug(s)
+                if "KAGGLE" not in os.environ:
+                    self.logger.debug(s)
         except Exception:
             pass
 
