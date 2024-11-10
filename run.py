@@ -107,6 +107,7 @@ async def run_from_json(
     *,
     challenges_path: str,
     solutions_path: str,
+    temp_solutions_dir_path: str,
     tree: list[prod.RootAttemptConfig],
     limit: int | None,
     only_run_ids: set[str] = None,
@@ -125,7 +126,7 @@ async def run_from_json(
     solutions_d: dict[str, list[ChallengeSolution]] = {}
     # run all challenges in parallel to start
 
-    solutions_dir = Path("test_data/tmp_solutions")
+    solutions_dir = Path(temp_solutions_dir_path)
     solutions_dir.mkdir(exist_ok=True)
 
     await process_challenges_with_limit(
@@ -152,6 +153,7 @@ async def run() -> None:
         # challenges_path="test_data/challenges.json",
         challenges_path="arc-prize-2024/arc-agi_evaluation_challenges.json",
         solutions_path="test_data/eval_solutions.json",
+        temp_solutions_dir_path="test_data/tmp_solutions",
         # tree=prod.one_level_haiku_tree,
         tree=prod.prod_kaggle_tree,
         limit=1,
