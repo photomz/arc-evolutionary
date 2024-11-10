@@ -42,7 +42,7 @@ from src.prompts.examples import (
 )
 from src.render_legacy import grid_to_base64_png_oai_content
 from src.reps import array_to_str, grid_diffs_to_ascii, grid_to_ascii
-from src.run_python import run_python_transform
+from src.run_python import run_python_transform_sync
 
 
 class TqdmLogfire:
@@ -617,7 +617,7 @@ def get_grids_from_attempt(attempt: Attempt) -> list[GRID]:
     challenge = attempt.challenge
     if len(challenge.test) == 1:
         return [attempt.test_attempt]
-    transform_results = run_python_transform(
+    transform_results = run_python_transform_sync(
         code=attempt.python_code_str,
         grid_lists=[deepcopy(test.input) for test in challenge.test],
         timeout=5,

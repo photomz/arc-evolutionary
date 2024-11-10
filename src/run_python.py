@@ -5,6 +5,7 @@ import sys
 import tempfile
 import time
 
+from asyncer import asyncify
 from devtools import debug
 from pydantic import BaseModel
 
@@ -24,7 +25,7 @@ class PythonException(Exception):
     pass
 
 
-def run_python_transform(
+def run_python_transform_sync(
     code: str, grid_lists: list[GRID], timeout: int, raise_exception: bool
 ) -> PythonResult:
     """
@@ -138,6 +139,61 @@ except Exception as e:
     finally:
         # Clean up the temporary file
         os.unlink(temp_file)
+
+
+async def run_python_transform_async(
+    code: str, grid_lists: list[GRID], timeout: int, raise_exception: bool
+) -> PythonResult | None:
+    try:
+        result = await asyncify(run_python_transform_sync)(
+            code=code,
+            grid_lists=grid_lists,
+            timeout=timeout,
+            raise_exception=raise_exception,
+        )
+        return result
+    except Exception as e:
+        print(f"ERROR RUNNING PYTHON: {e}")
+        return None
+
+
+class TransformInput(BaseModel):
+    code: str
+    grid_lists: list[GRID]
+    timeout: int
+    raise_exception: bool
+
+
+async def run_python_transforms(
+    inputs: list[TransformInput],
+) -> list[PythonResult | None]:
+    return await asyncio.gather(
+        *[
+            run_python_transform_async(
+                input.code, input.grid_lists, input.timeout, input.raise_exception
+            )
+            for input in inputs
+        ]
+    )
+
+
+async def main() -> None:
+    for _ in range(10):
+        print("running")
+        result = await run_python_transform_async(
+            _code, grid_lists=[test_grid, test_grid], timeout=5, raise_exception=False
+        )
+        print(result)
+    print("NOW ON TO TASKS TESTING")
+    tasks = [
+        run_python_transform_async(
+            _code, grid_lists=[test_grid, test_grid], timeout=5, raise_exception=False
+        )
+        for _ in range(10)
+    ]
+
+    results = await asyncio.gather(*tasks)
+    print(results)
 
 
 # Example usage
@@ -1865,11 +1921,14 @@ def transform(grid_list: list[list[int]]) -> list[list[int]]:
         ],
     ]
 
-    for _ in range(100):
+    for _ in range(10):
         print("running")
-        result = run_python_transform(
+        result = run_python_transform_sync(
             _code, grid_lists=[test_grid, test_grid], timeout=5, raise_exception=False
         )
+    import asyncio
+
+    asyncio.run(main())
     # debug(result)
 
     # Expected output for test grid:

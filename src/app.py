@@ -7,6 +7,8 @@ from src.logic import (
     RootAttemptConfig,
     solve_challenge_background,
 )
+from src.run_python import PythonResult, TransformInput
+from src.run_python import run_python_transforms as _transforms
 
 app = FastAPI()
 
@@ -28,34 +30,8 @@ async def solve_challenge(
     )
 
 
-from pydantic import BaseModel
-
-from src.run_python import GRID, PythonResult
-from src.run_python import run_python_transform as transform
-
-
-class TransformInput(BaseModel):
-    code: str
-    grid_lists: list[GRID]
-    timeout: int
-    raise_exception: bool
-
-
 @app.post("/run_python_transform", response_model=list[PythonResult | None])
-def run_python_transform(inputs: list[TransformInput]) -> list[PythonResult | None]:
-    print(f"RUNNING PYTHON: {len(inputs)}")
-    results: list[PythonResult | None] = []
-    for input in inputs:
-        try:
-            results.append(
-                transform(
-                    code=input.code,
-                    grid_lists=input.grid_lists,
-                    timeout=input.timeout,
-                    raise_exception=input.raise_exception,
-                )
-            )
-        except Exception as e:
-            print(f"ERROR RUNNING PYTHON: {e}")
-            results.append(None)
-    return results
+async def run_python_transforms(
+    inputs: list[TransformInput],
+) -> list[PythonResult | None]:
+    return await _transforms(inputs=inputs)

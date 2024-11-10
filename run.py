@@ -152,7 +152,7 @@ async def run() -> None:
         challenges_path="arc-prize-2024/arc-agi_evaluation_challenges.json",
         solutions_path="test_data/eval_solutions.json",
         tree=prod.one_level_haiku_tree,
-        limit=1,
+        limit=2,
         # limit=None,
         # only_run_ids={"aa4ec2a5"},
     )

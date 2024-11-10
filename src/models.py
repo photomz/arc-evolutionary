@@ -1,7 +1,9 @@
+import asyncio
 import hashlib
 import json
 import random
 import string
+import time
 import traceback
 import typing as T
 from copy import deepcopy
@@ -320,16 +322,16 @@ class Attempt(BaseModel):
         )
 
     @staticmethod
-    def llm_response_to_result_grids(
+    async def llm_response_to_result_grids(
         challenge: Challenge, llm_response: str, returns_python: bool
     ) -> tuple[str | None, GRID, list[GRID]]:
         from src.llms import parse_2d_arrays_from_string, parse_python_backticks
-        from src.run_python import run_python_transform
+        from src.run_python import run_python_transform_async
 
         if returns_python:
             python_str = parse_python_backticks(llm_response)
             # debug(python_str)
-            transform_results = run_python_transform(
+            transform_results = await run_python_transform_async(
                 code=python_str,
                 grid_lists=[
                     deepcopy(challenge.test[0].input),
@@ -355,21 +357,28 @@ class Attempt(BaseModel):
         return python_str, test_grid, train_grids
 
     @staticmethod
-    def llm_responses_to_result_grids_list(
+    async def llm_responses_to_result_grids_list(
         llm_responses: list[str], challenge: Challenge, returns_python: bool
     ) -> list[tuple[str | None, GRID, list[GRID]] | None]:
         result_grids_list: list[tuple[str | None, GRID, list[GRID]] | None] = []
-        for llm_response in llm_responses:
-            try:
-                res = Attempt.llm_response_to_result_grids(
-                    challenge=challenge,
-                    llm_response=llm_response,
-                    returns_python=returns_python,
-                )
-            except Exception as e:
-                logfire.debug(f"FAILED LLM RESPONSE: {e}, {traceback.format_exc()}")
-                res = None
-            result_grids_list.append(res)
+
+        tasks = [
+            Attempt.llm_response_to_result_grids(
+                challenge=challenge,
+                llm_response=llm_response,
+                returns_python=returns_python,
+            )
+            for llm_response in llm_responses
+        ]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        for r in results:
+            if isinstance(r, Exception):
+                logfire.debug(f"FAILED LLM RESPONSE: {r}")
+                result_grids_list.append(None)
+            else:
+                result_grids_list.append(r)
+
         return result_grids_list
 
     @classmethod
@@ -396,12 +405,13 @@ class Attempt(BaseModel):
                 f"[{challenge.id}] BIG PROBLEM***** Error getting next messages: {e}"
             )
             return []
-
-        grid_lists = cls.llm_responses_to_result_grids_list(
+        start_grid = time.time()
+        grid_lists = await cls.llm_responses_to_result_grids_list(
             llm_responses=[m[0] for m in next_messages],
             challenge=challenge,
             returns_python=attempt_config.prompt_config.returns_python,
         )
+        logfire.debug(f"[{challenge.id}] grids took {time.time() - start_grid} secs")
         attempts: list[Attempt] = []
         for next_message, grid_list in zip(next_messages, grid_lists, strict=True):
             if grid_list:
