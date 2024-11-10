@@ -156,10 +156,10 @@ async def run() -> None:
         temp_solutions_dir_path="test_data/tmp_solutions",
         # tree=prod.one_level_haiku_tree,
         tree=prod.prod_kaggle_tree,
-        limit=1,
+        limit=2,
         max_concurrent=20,
         # limit=None,
-        only_run_ids={"aa4ec2a5"},
+        # only_run_ids={"aa4ec2a5"},
     )
 
 
