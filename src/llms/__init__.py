@@ -47,7 +47,7 @@ async def get_next_message_anthropic(
     model: Model,
     temperature: float,
     retry_secs: int = 15,
-    max_retries: int = 1_000,
+    max_retries: int = 200,
 ) -> tuple[str, ModelUsage] | None:
     retry_count = 0
     while True:
@@ -102,7 +102,7 @@ async def get_next_message_openai(
     model: Model,
     temperature: float,
     retry_secs: int = 15,
-    max_retries: int = 1_000,
+    max_retries: int = 50,
 ) -> tuple[str, ModelUsage] | None:
     retry_count = 0
     while True:

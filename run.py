@@ -110,6 +110,7 @@ async def run_from_json(
     tree: list[prod.RootAttemptConfig],
     limit: int | None,
     only_run_ids: set[str] = None,
+    max_concurrent: int,
 ) -> None:
     start = time.time()
     challenges = build_challenges(
@@ -132,7 +133,7 @@ async def run_from_json(
         solutions_d=solutions_d,
         tree=tree,
         solutions_dir=solutions_dir,
-        max_concurrent=10,
+        max_concurrent=max_concurrent,
     )
 
     # iterate through solutions dir and load in the solutions? or just use solutions_d
@@ -152,7 +153,8 @@ async def run() -> None:
         challenges_path="arc-prize-2024/arc-agi_evaluation_challenges.json",
         solutions_path="test_data/eval_solutions.json",
         tree=prod.one_level_haiku_tree,
-        limit=2,
+        limit=20,
+        max_concurrent=20,
         # limit=None,
         # only_run_ids={"aa4ec2a5"},
     )

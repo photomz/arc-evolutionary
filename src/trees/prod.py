@@ -554,9 +554,9 @@ big_claude_tree: list[RootAttemptConfig] = [
 
 one_level_haiku_tree: list[RootAttemptConfig] = [
     RootAttemptConfig(
-        attempts=50,
+        attempts=20,
         llm_config=LLMConfig(
-            model=Model.claude_3_5_sonnet,
+            model=Model.claude_3_5_haiku,
             temperature=0.95,
         ),
         prompt_config=RootPromptConfig(
@@ -571,9 +571,9 @@ one_level_haiku_tree: list[RootAttemptConfig] = [
         fixes=[],
     ),
     RootAttemptConfig(
-        attempts=200,
+        attempts=100,
         llm_config=LLMConfig(
-            model=Model.claude_3_5_sonnet,
+            model=Model.claude_3_5_haiku,
             temperature=0.95,
         ),
         prompt_config=RootPromptConfig(
@@ -588,7 +588,7 @@ one_level_haiku_tree: list[RootAttemptConfig] = [
         fixes=[
             AttemptEdge(
                 k_top_config=KTopConfig(
-                    k_top=3,
+                    k_top=1,
                     unique_code=False,
                     unique_output=False,
                 ),
@@ -596,7 +596,7 @@ one_level_haiku_tree: list[RootAttemptConfig] = [
                     FixAttemptConfig(
                         attempts=3,
                         llm_config=LLMConfig(
-                            model=Model.claude_3_5_sonnet,
+                            model=Model.claude_3_5_haiku,
                             temperature=0.95,
                         ),
                         prompt_config=FixPromptConfig(
@@ -620,7 +620,7 @@ one_level_haiku_tree: list[RootAttemptConfig] = [
                                     FixAttemptConfig(
                                         attempts=3,
                                         llm_config=LLMConfig(
-                                            model=Model.claude_3_5_sonnet,
+                                            model=Model.claude_3_5_haiku,
                                             temperature=0.95,
                                         ),
                                         prompt_config=FixPromptConfig(
@@ -644,7 +644,7 @@ one_level_haiku_tree: list[RootAttemptConfig] = [
             AttemptEdge(
                 pooling=(PoolingConfig(size=3)),
                 k_top_config=KTopConfig(
-                    k_top=3,
+                    k_top=1,
                     unique_code=False,
                     unique_output=False,
                 ),
@@ -652,7 +652,7 @@ one_level_haiku_tree: list[RootAttemptConfig] = [
                     FixAttemptConfig(
                         attempts=3,
                         llm_config=LLMConfig(
-                            model=Model.claude_3_5_sonnet,
+                            model=Model.claude_3_5_haiku,
                             temperature=0.95,
                         ),
                         prompt_config=FixPromptConfig(
@@ -672,9 +672,9 @@ one_level_haiku_tree: list[RootAttemptConfig] = [
         ],
     ),
     RootAttemptConfig(
-        attempts=10,
+        attempts=5,
         llm_config=LLMConfig(
-            model=Model.gpt_4o,
+            model=Model.gpt_4o_mini,
             temperature=0.95,
         ),
         prompt_config=RootPromptConfig(
