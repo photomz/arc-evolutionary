@@ -742,7 +742,7 @@ async def solve_challenge_background(
         )
         return solution_attempts
     except Exception as e:
-        print(f"ERROR CATCHING ATTEMPTS: {e=}, {traceback.format_exc()}")
+        logfire.debug(f"ERROR CATCHING ATTEMPTS: {e=}, {traceback.format_exc()}")
         now = time.time() * 1000
         await redis_client.set(
             key,

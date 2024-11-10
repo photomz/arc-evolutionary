@@ -9,6 +9,7 @@ from asyncer import asyncify
 from devtools import debug
 from pydantic import BaseModel
 
+from src import logfire
 from src.models import GRID
 
 
@@ -153,7 +154,7 @@ async def run_python_transform_async(
         )
         return result
     except Exception as e:
-        print(f"ERROR RUNNING PYTHON: {e}")
+        logfire.debug(f"ERROR RUNNING PYTHON: {e}")
         return None
 
 
