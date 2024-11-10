@@ -399,6 +399,17 @@ def get_diverse_attempts(
     return final_attempts
 
 
+def has_perfect_attempts(attempts: list[Attempt]) -> bool:
+    attempts_perfect = [a for a in attempts if a.train_accuracy == 1]
+    n_perfect = len(attempts_perfect)
+    if n_perfect >= 2:
+        message = f"[{attempts_perfect[0].challenge.id}] found {n_perfect} solutions from {len(attempts)} attempts"
+        logfire.debug(message)
+        print(message)
+        return True
+    return False
+
+
 async def run_fixes_tree(
     parent_attempts: list[Attempt],
     edges: list[AttemptEdge],
@@ -481,13 +492,7 @@ async def run_fixes_tree(
             )
             all_attempts.extend(local_attempts)
             # now see if you have a solution
-            attempts_with_perfect_train_accuracy = [
-                a for a in all_attempts if a.train_accuracy == 1
-            ]
-            if len(attempts_with_perfect_train_accuracy) >= 2:
-                message = f"[{attempts_with_perfect_train_accuracy[0].challenge.id}] found 2 solutions with {len(attempts_with_perfect_train_accuracy)} attempts"
-                logfire.debug(message)
-                print(message)
+            if has_perfect_attempts(all_attempts):
                 return all_attempts
 
             # now run the fixes
@@ -498,6 +503,11 @@ async def run_fixes_tree(
                     warm_cache=warm_cache,
                 )
             )
+
+            dedup_attempts(all_attempts)
+            if has_perfect_attempts(all_attempts):
+                return all_attempts
+
     logfire.debug(f"ALL ATTEMPTS LEN: {len(all_attempts)}")
     return all_attempts
 
@@ -527,40 +537,6 @@ async def run_tree(
         message = f"[{challenge.id}] running root node with {root_attempt_config.attempts} attempts."
         print(message)
         logfire.debug(message)
-        """
-        local_attempts: list[Attempt] = []
-        if warm_cache_root:
-            first_attempt = await Attempt.run(
-                challenge=challenge,
-                attempt_config=root_attempt_config.model_copy(deep=True),
-                raise_exception=False,
-                fixing=[],
-            )
-            if first_attempt:
-                local_attempts.append(first_attempt)
-
-        tasks = []
-        for _ in range(root_attempt_config.attempts - (1 if warm_cache_root else 0)):
-            tasks.append(
-                Attempt.run(
-                    challenge=challenge,
-                    attempt_config=root_attempt_config.model_copy(deep=True),
-                    raise_exception=False,
-                    fixing=[],
-                )
-            )
-        task_chunks = chunk_list(lst=tasks, n=100)
-        for i, task_chunk in enumerate(task_chunks):
-            local_attempts.extend(
-                a
-                for a in await tqdm_asyncio.gather(
-                    *task_chunk,
-                    desc=f"[{challenge.id}] Processing root attempts, chunk {i + 1}/{len(task_chunks)}",
-                    file=TqdmLogfire(),
-                )
-                if a
-            )
-        """
         local_attempts = await Attempt.run_many(
             challenge=challenge,
             attempt_config=root_attempt_config,
@@ -581,13 +557,7 @@ async def run_tree(
         all_attempts = dedup_attempts(all_attempts)
 
         # now see if you have a solution
-        attempts_with_perfect_train_accuracy = [
-            a for a in all_attempts if a.train_accuracy == 1
-        ]
-        if len(attempts_with_perfect_train_accuracy) >= 2:
-            message = f"[{challenge.id}] found 2 solutions with {len(attempts_with_perfect_train_accuracy)} attempts"
-            logfire.debug(message)
-            print(message)
+        if has_perfect_attempts(all_attempts):
             return all_attempts
 
         # now run the fixes
@@ -601,13 +571,7 @@ async def run_tree(
         all_attempts = dedup_attempts(all_attempts)
 
         # now see if you have a solution
-        attempts_with_perfect_train_accuracy = [
-            a for a in all_attempts if a.train_accuracy == 1
-        ]
-        if len(attempts_with_perfect_train_accuracy) >= 2:
-            message = f"[{challenge.id}] found 2 solutions with {len(attempts_with_perfect_train_accuracy)} attempts"
-            logfire.debug(message)
-            print(message)
+        if has_perfect_attempts(all_attempts):
             return all_attempts
 
     return dedup_attempts(all_attempts)
