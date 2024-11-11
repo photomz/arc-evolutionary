@@ -597,9 +597,29 @@ def get_grids_from_attempt(attempt: Attempt) -> list[GRID]:
 
 
 async def solve_challenge(
-    tree: list[RootAttemptConfig], challenge: Challenge
+    tree: list[RootAttemptConfig], challenge: Challenge, url: str = None
 ) -> tuple[list[GRID], list[GRID]]:
-    # DFS tree, so always exit early if we find a solution (works for all examples)
+    if url:
+        async with httpx.AsyncClient(timeout=3600) as client:
+            r = await client.post(
+                url,
+                json={
+                    "tree": TypeAdapter(list[RootAttemptConfig]).dump_python(
+                        tree, mode="json"
+                    ),
+                    "challenge": Challenge.model_dump(challenge, mode="json"),
+                    "env_vars": {
+                        "OPENAI_API_KEY": os.environ["OPENAI_API_KEY"],
+                        "ANTHROPIC_API_KEY": os.environ["ANTHROPIC_API_KEY"],
+                        "LOGFIRE_TOKEN": os.environ.get("LOGFIRE_TOKEN"),
+                        "NEON_DB_DSN": os.environ.get("NEON_DB_DSN"),
+                    },
+                },
+            )
+            j = r.json()
+            debug(j)
+            # TODO run retry logic here?
+        return j
 
     run_id = f"run_{random_string(10)}"
     started_at_ms = time.time() * 1000
@@ -640,6 +660,19 @@ async def solve_challenge(
     return get_grids_from_attempt(first_solution), get_grids_from_attempt(
         second_solution
     )
+
+
+async def solve_challenge_server(
+    tree: list[RootAttemptConfig],
+    challenge: Challenge,
+    env_vars: dict[str, str],
+) -> tuple[list[GRID], list[GRID]]:
+    for k, v in env_vars.items():
+        os.environ[k] = v
+    res = await solve_challenge(tree=tree, challenge=challenge)
+    for k in env_vars.keys():
+        del os.environ[k]
+    return res
 
 
 class CacheData(BaseModel):

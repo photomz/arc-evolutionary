@@ -6,6 +6,7 @@ from src.logic import (
     Challenge,
     RootAttemptConfig,
     solve_challenge_background,
+    solve_challenge_server,
 )
 from src.run_python import PythonResult, TransformInput
 from src.run_python import run_python_transforms as _transforms
@@ -22,11 +23,10 @@ async def read_root():
 async def solve_challenge(
     tree: list[RootAttemptConfig],
     challenge: Challenge,
-    cache_data: CacheData,
-    environ_data: dict[str, str],
+    env_vars: dict[str, str],
 ) -> tuple[list[GRID], list[GRID]]:
-    return await solve_challenge_background(
-        tree=tree, challenge=challenge, cache_data=cache_data, environ_data=environ_data
+    return await solve_challenge_server(
+        tree=tree, challenge=challenge, env_vars=env_vars
     )
 
 
