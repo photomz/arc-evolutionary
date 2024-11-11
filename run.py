@@ -35,7 +35,7 @@ async def solve_and_write(
     print(f"[{challenge.id}] starting challenge...")
 
     first_solutions, second_solutions = await solve_challenge(
-        challenge=challenge, tree=tree
+        challenge=challenge, tree=tree, url=os.environ["SERVER_URL"]
     )
 
     solutions_d[challenge.id] = []
