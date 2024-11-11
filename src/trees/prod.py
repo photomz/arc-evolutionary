@@ -1133,23 +1133,23 @@ one_level_haiku_tree: list[RootAttemptConfig] = [
             ),
         ],
     ),
-    RootAttemptConfig(
-        attempts=5,
-        llm_config=LLMConfig(
-            model=Model.gpt_4o_mini,
-            temperature=0.95,
-        ),
-        prompt_config=RootPromptConfig(
-            base_prompt=Prompt.REASONING,
-            use_examples=True,
-            use_diffs=True,
-            use_images=True,
-            use_ascii=True,
-            use_array=True,
-            use_image=True,
-        ),
-        fixes=[],
-    ),
+    # RootAttemptConfig(
+    #     attempts=5,
+    #     llm_config=LLMConfig(
+    #         model=Model.gpt_4o_mini,
+    #         temperature=0.95,
+    #     ),
+    #     prompt_config=RootPromptConfig(
+    #         base_prompt=Prompt.REASONING,
+    #         use_examples=True,
+    #         use_diffs=True,
+    #         use_images=True,
+    #         use_ascii=True,
+    #         use_array=True,
+    #         use_image=True,
+    #     ),
+    #     fixes=[],
+    # ),
 ]
 
 tiny_claude_tree: list[RootAttemptConfig] = [

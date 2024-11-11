@@ -40,7 +40,9 @@ async def solve_and_write(
         url = None
 
     first_solutions, second_solutions = await solve_challenge(
-        challenge=challenge, tree=tree, url=url
+        challenge=challenge,
+        tree=tree,
+        # url=url,
     )
     solutions_d[challenge.id] = []
     for i in range(len(first_solutions)):
@@ -168,8 +170,8 @@ async def run() -> None:
         challenges_path="arc-prize-2024/arc-agi_evaluation_challenges.json",
         solutions_path="test_data/eval_solutions.json",
         temp_solutions_dir_path="test_data/tmp_solutions",
-        # tree=prod.one_level_haiku_tree,
-        tree=prod.prod_kaggle_tree,
+        tree=prod.one_level_haiku_tree,
+        # tree=prod.prod_kaggle_tree,
         limit=6,
         max_concurrent=20,
         # limit=None,

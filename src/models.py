@@ -17,7 +17,7 @@ from devtools import debug
 from pydantic import BaseModel, computed_field
 from tqdm import tqdm
 
-from src import logfire
+from src import USE_GRID_URL, logfire
 from src.db import init_db_pool, pool
 from src.prompts import prompts
 
@@ -411,16 +411,21 @@ class Attempt(BaseModel):
         start_grid = time.time()
         llm_responses = [m[0] for m in next_messages]
         grid_lists = None
-        if server_url := os.environ.get("SERVER_URL"):
+        if USE_GRID_URL:
             try:
-                async with httpx.AsyncClient(timeout=3000) as client:
+                async with httpx.AsyncClient(timeout=120) as client:
                     r = await client.post(
-                        f"{server_url}/llm_responses_to_grid_list",
+                        url="https://arc-agi-306099487123.us-central1.run.app/llm_responses_to_grid_list",
                         json={
                             "llm_responses": llm_responses,
                             "challenge": Challenge.model_dump(challenge, mode="json"),
-                            "returns_python": attempt_config.prompt_config.returns_python,
                         },
+                        params={
+                            "returns_python": attempt_config.prompt_config.returns_python
+                        },
+                    )
+                    logfire.debug(
+                        f"[{challenge.id}] getting grid from server took {r.elapsed.total_seconds()}"
                     )
                 grid_lists = r.json()
             except Exception as e:
