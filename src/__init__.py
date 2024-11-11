@@ -39,6 +39,7 @@ class LogfireDummy:
                 if "KAGGLE" not in os.environ:
                     self.logger.debug(s)
                 else:
+                    # make sure no non-sdk logs are recorded
                     if "anthropic" in s or "Transform" in s or "limit" in s:
                         self.logger.debug(s)
         except Exception:
