@@ -607,21 +607,26 @@ async def solve_challenge(
             "NEON_DB_DSN": os.environ.get("NEON_DB_DSN"),
         }
         if "KAGGLE" in os.environ:
+            # RECORD 0 LOGS
             env_vars["KAGGLE"] = os.environ["KAGGLE"]
-        async with httpx.AsyncClient(timeout=3600) as client:
-            r = await client.post(
-                url,
-                json={
-                    "tree": TypeAdapter(list[RootAttemptConfig]).dump_python(
-                        tree, mode="json"
-                    ),
-                    "challenge": Challenge.model_dump(challenge, mode="json"),
-                    "env_vars": env_vars,
-                },
-            )
-            j = r.json()
-            # TODO run retry logic here?
-        return j
+        try:
+            async with httpx.AsyncClient(timeout=3000) as client:
+                r = await client.post(
+                    url,
+                    json={
+                        "tree": TypeAdapter(list[RootAttemptConfig]).dump_python(
+                            tree, mode="json"
+                        ),
+                        "challenge": Challenge.model_dump(challenge, mode="json"),
+                        "env_vars": env_vars,
+                    },
+                )
+                j = r.json()
+            print(f"[{challenge.id}] solved")
+            return j
+        except Exception as e:
+            logfire.debug(f"ERROR RUNNING PYTHON: {e}")
+            pass
 
     run_id = f"run_{random_string(10)}"
     started_at_ms = time.time() * 1000
