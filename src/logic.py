@@ -489,10 +489,15 @@ async def run_fixes_tree(
             if has_perfect_attempts(all_attempts):
                 return all_attempts
 
+            if fix_attempt_config.include_all_attempts_in_fixes:
+                parent_attempts = all_attempts
+            else:
+                parent_attempts = local_attempts
+
             # now run the fixes
             all_attempts.extend(
                 await run_fixes_tree(
-                    parent_attempts=local_attempts,
+                    parent_attempts=parent_attempts,
                     edges=fix_attempt_config.fixes,
                     warm_cache=warm_cache,
                 )
@@ -555,9 +560,13 @@ async def run_tree(
             return all_attempts
 
         # now run the fixes
+        if root_attempt_config.include_all_attempts_in_fixes:
+            parent_attempts = all_attempts
+        else:
+            parent_attempts = local_attempts
         all_attempts.extend(
             await run_fixes_tree(
-                parent_attempts=local_attempts,
+                parent_attempts=parent_attempts,
                 edges=root_attempt_config.fixes,
                 warm_cache=warm_cache_fix,
             )

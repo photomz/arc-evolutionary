@@ -60,6 +60,7 @@ prod_kaggle_tree: list[RootAttemptConfig] = [
         fixes=[],
     ),
     RootAttemptConfig(
+        include_all_attempts_in_fixes=True,
         attempts=200,
         llm_config=LLMConfig(
             model=Model.claude_3_5_sonnet,
@@ -1014,6 +1015,24 @@ testing_level_haiku_tree: list[RootAttemptConfig] = [
 
 one_level_haiku_tree: list[RootAttemptConfig] = [
     RootAttemptConfig(
+        attempts=5,
+        llm_config=LLMConfig(
+            model=Model.claude_3_5_haiku,
+            temperature=0.95,
+        ),
+        prompt_config=RootPromptConfig(
+            base_prompt=Prompt.REASONING,
+            use_examples=True,
+            use_diffs=True,
+            use_images=True,
+            use_ascii=True,
+            use_array=True,
+            use_image=True,
+        ),
+        fixes=[],
+    ),
+    RootAttemptConfig(
+        include_all_attempts_in_fixes=True,
         attempts=5,
         llm_config=LLMConfig(
             model=Model.claude_3_5_haiku,

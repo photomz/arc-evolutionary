@@ -194,6 +194,7 @@ class AttemptConfig(BaseModel):
     attempts: int
     llm_config: LLMConfig
     fixes: list["AttemptEdge"]
+    include_all_attempts_in_fixes: bool = False
 
 
 class RootAttemptConfig(AttemptConfig):
