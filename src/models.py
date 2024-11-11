@@ -1,6 +1,7 @@
 import asyncio
 import hashlib
 import json
+import os
 import random
 import string
 import time
@@ -10,6 +11,7 @@ from copy import deepcopy
 from enum import Enum
 from pathlib import Path
 
+import httpx
 import numpy as np
 from devtools import debug
 from pydantic import BaseModel, computed_field
@@ -407,11 +409,30 @@ class Attempt(BaseModel):
             )
             return []
         start_grid = time.time()
-        grid_lists = await cls.llm_responses_to_result_grids_list(
-            llm_responses=[m[0] for m in next_messages],
-            challenge=challenge,
-            returns_python=attempt_config.prompt_config.returns_python,
-        )
+        llm_responses = [m[0] for m in next_messages]
+        grid_lists = None
+        if server_url := os.environ.get("SERVER_URL"):
+            try:
+                async with httpx.AsyncClient(timeout=3000) as client:
+                    r = await client.post(
+                        f"{server_url}/llm_responses_to_grid_list",
+                        json={
+                            "llm_responses": llm_responses,
+                            "challenge": Challenge.model_dump(challenge, mode="json"),
+                            "returns_python": attempt_config.prompt_config.returns_python,
+                        },
+                    )
+                grid_lists = r.json()
+            except Exception as e:
+                logfire.debug(f"ERROR RUNNING GRIDLISTS SERVER: {e}")
+                grid_lists = None
+
+        if grid_lists is None:
+            grid_lists = await cls.llm_responses_to_result_grids_list(
+                llm_responses=llm_responses,
+                challenge=challenge,
+                returns_python=attempt_config.prompt_config.returns_python,
+            )
         logfire.debug(f"[{challenge.id}] grids took {time.time() - start_grid} secs")
         attempts: list[Attempt] = []
         for next_message, grid_list in zip(next_messages, grid_lists, strict=True):

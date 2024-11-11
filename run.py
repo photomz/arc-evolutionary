@@ -34,15 +34,14 @@ async def solve_and_write(
     start = time.time()
     print(f"[{challenge.id}] starting challenge...")
 
-    first_solutions, second_solutions = await solve_challenge(
-        challenge=challenge,
-        tree=tree,
-        url=os.environ.get(
-            "SERVER_URL",
-            # "https://arc-agi-306099487123.us-central1.run.app/solve_challenge",
-        ),
-    )
+    if server_url := os.environ.get("SERVER_URL"):
+        url = f"{server_url}/solve_challenge"
+    else:
+        url = None
 
+    first_solutions, second_solutions = await solve_challenge(
+        challenge=challenge, tree=tree, url=url
+    )
     solutions_d[challenge.id] = []
     for i in range(len(first_solutions)):
         solutions_d[challenge.id].append(

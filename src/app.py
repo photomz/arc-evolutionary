@@ -8,6 +8,7 @@ from src.logic import (
     solve_challenge_background,
     solve_challenge_server,
 )
+from src.models import Attempt
 from src.run_python import PythonResult, TransformInput
 from src.run_python import run_python_transforms as _transforms
 
@@ -35,3 +36,17 @@ async def run_python_transforms(
     inputs: list[TransformInput],
 ) -> list[PythonResult | None]:
     return await _transforms(inputs=inputs)
+
+
+@app.post(
+    "/llm_responses_to_grid_list",
+    response_model=list[tuple[str | None, GRID, list[GRID]] | None],
+)
+async def llm_responses_to_grid_list(
+    llm_responses: list[str], challenge: Challenge, returns_python: bool
+) -> list[tuple[str | None, GRID, list[GRID]] | None]:
+    return await Attempt.llm_responses_to_result_grids_list(
+        llm_responses=llm_responses,
+        challenge=challenge,
+        returns_python=returns_python,
+    )
