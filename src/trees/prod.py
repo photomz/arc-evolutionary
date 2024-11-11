@@ -60,7 +60,7 @@ prod_kaggle_tree: list[RootAttemptConfig] = [
         fixes=[],
     ),
     RootAttemptConfig(
-        attempts=300,
+        attempts=200,
         llm_config=LLMConfig(
             model=Model.claude_3_5_sonnet,
             temperature=0.95,
@@ -99,7 +99,7 @@ prod_kaggle_tree: list[RootAttemptConfig] = [
                         fixes=[
                             AttemptEdge(
                                 k_top_config=KTopConfig(
-                                    k_top=10, unique_code=False, unique_output=False
+                                    k_top=5, unique_code=False, unique_output=False
                                 ),
                                 configs=[
                                     FixAttemptConfig(
@@ -121,7 +121,7 @@ prod_kaggle_tree: list[RootAttemptConfig] = [
                                         fixes=[
                                             AttemptEdge(
                                                 k_top_config=KTopConfig(
-                                                    k_top=10,
+                                                    k_top=5,
                                                     unique_code=False,
                                                     unique_output=False,
                                                 ),
