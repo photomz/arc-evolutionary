@@ -85,6 +85,8 @@ async def get_next_message_anthropic(
                 return None
             await asyncio.sleep(retry_secs)
         except Exception as e:
+            if "invalid x-api-key" in str(e):
+                return None
             logfire.debug(
                 f"Other anthropic error: {str(e)}, retrying in {retry_secs} seconds ({retry_count}/{max_retries})..."
             )
