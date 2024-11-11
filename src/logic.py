@@ -600,6 +600,14 @@ async def solve_challenge(
     tree: list[RootAttemptConfig], challenge: Challenge, url: str = None
 ) -> tuple[list[GRID], list[GRID]]:
     if url:
+        env_vars = {
+            "OPENAI_API_KEY": os.environ["OPENAI_API_KEY"],
+            "ANTHROPIC_API_KEY": os.environ["ANTHROPIC_API_KEY"],
+            "LOGFIRE_TOKEN": os.environ.get("LOGFIRE_TOKEN"),
+            "NEON_DB_DSN": os.environ.get("NEON_DB_DSN"),
+        }
+        if "KAGGLE" in os.environ:
+            env_vars["KAGGLE"] = os.environ["KAGGLE"]
         async with httpx.AsyncClient(timeout=3600) as client:
             r = await client.post(
                 url,
@@ -608,16 +616,10 @@ async def solve_challenge(
                         tree, mode="json"
                     ),
                     "challenge": Challenge.model_dump(challenge, mode="json"),
-                    "env_vars": {
-                        "OPENAI_API_KEY": os.environ["OPENAI_API_KEY"],
-                        "ANTHROPIC_API_KEY": os.environ["ANTHROPIC_API_KEY"],
-                        "LOGFIRE_TOKEN": os.environ.get("LOGFIRE_TOKEN"),
-                        "NEON_DB_DSN": os.environ.get("NEON_DB_DSN"),
-                    },
+                    "env_vars": env_vars,
                 },
             )
             j = r.json()
-            debug(j)
             # TODO run retry logic here?
         return j
 

@@ -35,7 +35,9 @@ async def solve_and_write(
     print(f"[{challenge.id}] starting challenge...")
 
     first_solutions, second_solutions = await solve_challenge(
-        challenge=challenge, tree=tree, url=os.environ["SERVER_URL"]
+        challenge=challenge,
+        tree=tree,
+        url=os.environ.get("SERVER_URL"),
     )
 
     solutions_d[challenge.id] = []
@@ -165,11 +167,11 @@ async def run() -> None:
         solutions_path="test_data/eval_solutions.json",
         temp_solutions_dir_path="test_data/tmp_solutions",
         # tree=prod.one_level_haiku_tree,
-        tree=prod.one_level_haiku_tree,
-        limit=1,
+        tree=prod.prod_kaggle_tree,
+        limit=6,
         max_concurrent=20,
         # limit=None,
-        only_run_ids={"009d5c81"},
+        # only_run_ids={"009d5c81"},
     )
 
 
