@@ -29,6 +29,7 @@ async def solve_and_write(
     challenge: Challenge,
     tree: list[prod.RootAttemptConfig],
     solutions_dir: Path,
+    solutions_path: str,
 ) -> None:
     start = time.time()
     print(f"[{challenge.id}] starting challenge...")
@@ -57,6 +58,12 @@ async def solve_and_write(
         .dump_json(solutions_d[challenge.id])
         .decode("utf-8")
     )
+    # just write to be safe
+    open(solutions_path, "w").write(
+        TypeAdapter(dict[str, list[ChallengeSolution]])
+        .dump_json(solutions_d)
+        .decode("utf-8")
+    )
     took_secs = time.time() - start
     logfire.debug(f"[{challenge.id}] took {took_secs:.2f} secs to solve and write")
 
@@ -66,6 +73,7 @@ async def process_challenges_with_limit(
     solutions_d: dict[str, list[ChallengeSolution]],
     tree: list[prod.RootAttemptConfig],
     solutions_dir: Path,
+    solutions_path: str,
     max_concurrent: int,
 ) -> list[T.Any]:
     # Create a semaphore to limit concurrent tasks
@@ -82,6 +90,7 @@ async def process_challenges_with_limit(
                     challenge=challenge,
                     tree=tree,
                     solutions_dir=solutions_dir,
+                    solutions_path=solutions_path,
                 )
             except Exception as e:
                 logfire.debug(f"Error processing challenge: {e}")
@@ -134,6 +143,7 @@ async def run_from_json(
         solutions_d=solutions_d,
         tree=tree,
         solutions_dir=solutions_dir,
+        solutions_path=solutions_path,
         max_concurrent=max_concurrent,
     )
 
