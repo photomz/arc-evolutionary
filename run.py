@@ -39,7 +39,7 @@ async def solve_and_write(
         tree=tree,
         url=os.environ.get(
             "SERVER_URL",
-            "https://arc-agi-306099487123.us-central1.run.app/solve_challenge",
+            # "https://arc-agi-306099487123.us-central1.run.app/solve_challenge",
         ),
     )
 
