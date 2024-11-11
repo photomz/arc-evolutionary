@@ -38,6 +38,9 @@ class LogfireDummy:
             else:
                 if "KAGGLE" not in os.environ:
                     self.logger.debug(s)
+                else:
+                    if "anthropic" in s or "Transform" in s or "limit" in s:
+                        self.logger.debug(s)
         except Exception:
             pass
 
