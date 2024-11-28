@@ -315,7 +315,7 @@ def eval_attempts(
     }
     logfire.debug("eval", **debug_d)
     print(
-        f"[{attempts[0].challenge.id}] finished processing node: {total_runs} attempts, {round(avg_train_accuracy * 100, 2)}% accuracy, ${round(total_cost / 100, 2)}, {round(time_took_ms / 1000, 2)} secs",
+        f"[{attempts[0].challenge.id}] finished processing node [{attempts[0].config.llm_config.model.value}]: {total_runs} attempts, {round(avg_train_accuracy * 100, 2)}% accuracy, ${round(total_cost / 100, 2)}, {round(time_took_ms / 1000, 2)} secs",
     )
 
 

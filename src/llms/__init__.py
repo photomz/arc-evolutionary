@@ -5,11 +5,13 @@ import os
 import re
 import time
 import typing as T
+from datetime import timedelta
 
 import google.generativeai as genai
 import PIL.Image
 from anthropic import AsyncAnthropic, RateLimitError
 from devtools import debug
+from google.generativeai import caching as gemini_caching
 from openai import AsyncAzureOpenAI, AsyncOpenAI
 
 from src import logfire
@@ -107,18 +109,23 @@ async def get_next_message_openai(
     max_retries: int = 50,
 ) -> tuple[str, ModelUsage] | None:
     retry_count = 0
+    params = {
+        "temperature": temperature,
+        "max_tokens": 30_000,
+        "messages": messages,
+        "model": model.value,
+        "timeout": 120,
+    }
+    if model in [Model.o1_preview, Model.o1_mini]:
+        params["max_completion_tokens"] = params["max_tokens"]
+        del params["max_tokens"]
+        del params["temperature"]
     while True:
         try:
             request_id = random_string()
             start = time.time()
             logfire.debug(f"[{request_id}] calling openai")
-            message = await openai_client.chat.completions.create(
-                temperature=temperature,
-                max_tokens=10_000,
-                messages=messages,
-                model=model.value,
-                timeout=120,
-            )
+            message = await openai_client.chat.completions.create(**params)
             took_ms = (time.time() - start) * 1000
             cached_tokens = message.usage.prompt_tokens_details.cached_tokens
             usage = ModelUsage(
@@ -141,6 +148,62 @@ async def get_next_message_openai(
                 return None
             await asyncio.sleep(retry_secs)
     return message.choices[0].message.content, usage
+
+
+async def get_next_message_gemini(
+    cache: gemini_caching.CachedContent,
+    model: Model,
+    temperature: float,
+    retry_secs: int = 15,
+    max_retries: int = 200,
+) -> tuple[str, ModelUsage] | None:
+    retry_count = 0
+    while True:
+        try:
+            request_id = random_string()
+            start = time.time()
+            logfire.debug(f"[{request_id}] calling gemini")
+
+            genai_model = genai.GenerativeModel.from_cached_content(
+                cached_content=cache
+            )
+
+            response = await genai_model.generate_content_async(
+                contents=[
+                    genai.types.ContentDict(
+                        role="user", parts=[genai.types.PartDict(text="Please answer.")]
+                    )
+                ],
+                generation_config=genai.types.GenerationConfig(
+                    temperature=temperature,
+                    # max_output_tokens=10_000,
+                ),
+            )
+
+            took_ms = (time.time() - start) * 1000
+            usage = ModelUsage(
+                cache_creation_input_tokens=0,
+                cache_read_input_tokens=response.usage_metadata.cached_content_token_count,
+                input_tokens=response.usage_metadata.prompt_token_count
+                - response.usage_metadata.cached_content_token_count,
+                output_tokens=response.usage_metadata.candidates_token_count,
+            )
+            logfire.debug(
+                f"[{request_id}] got back gemini, took {took_ms:.2f}, {usage}, cost_cents={Attempt.cost_cents_from_usage(model=model, usage=usage)}"
+            )
+            break  # Success, exit the loop
+        except Exception as e:
+            if "invalid x-api-key" in str(e):
+                return None
+            logfire.debug(
+                f"Other gemini error: {str(e)}, retrying in {retry_secs} seconds ({retry_count}/{max_retries})..."
+            )
+            retry_count += 1
+            if retry_count >= max_retries:
+                # raise  # Re-raise the exception after max retries
+                return None
+            await asyncio.sleep(retry_secs)
+    return response.text, usage
 
 
 async def get_next_messages(
@@ -207,8 +270,12 @@ async def get_next_messages(
         ]
         # filter out the Nones
         return [m for m in n_messages if m]
-    elif model in [Model.gpt_4o, Model.gpt_4o_mini]:
+    elif model in [Model.gpt_4o, Model.gpt_4o_mini, Model.o1_mini, Model.o1_preview]:
         openai_client = AsyncOpenAI(api_key=os.environ["OPENAI_API_KEY"])
+        if model in [Model.o1_mini, Model.o1_preview]:
+            if messages[0]["role"] == "system":
+                messages[0]["role"] = "user"
+
         n_messages = [
             await get_next_message_openai(
                 openai_client=openai_client,
@@ -225,6 +292,62 @@ async def get_next_messages(
                         temperature=temperature,
                     )
                     for _ in range(n_times - 1)
+                ]
+            ),
+        ]
+        # filter out the Nones
+        return [m for m in n_messages if m]
+    elif model in [Model.gemini_1_5_pro]:
+        if messages[0]["role"] == "system":
+            system_messages = messages[0]["content"]
+            messages = messages[1:]
+        else:
+            system_messages = []
+        system_instruction = system_messages[0]["text"]
+        gemini_contents: list[genai.types.ContentDict] = []
+        for message in messages:
+            if message["role"] == "assistant":
+                role = "model"
+            else:
+                role = message["role"]
+            # debug(message["content"])
+            if type(message["content"]) is str:
+                parts = [genai.types.PartDict(text=message["content"])]
+            else:
+                parts = []
+                for c in message["content"]:
+                    if c["type"] == "text":
+                        parts.append(genai.types.PartDict(text=c["text"]))
+                    elif c["type"] == "image_url":
+                        image = PIL.Image.open(
+                            io.BytesIO(
+                                base64.b64decode(
+                                    c["image_url"]["url"].replace(
+                                        "data:image/png;base64,", ""
+                                    )
+                                )
+                            )
+                        )
+                        if image.mode == "RGBA":
+                            image = image.convert("RGB")
+                        parts.append(image)
+            gemini_contents.append(genai.types.ContentDict(role=role, parts=parts))
+
+        cache = gemini_caching.CachedContent.create(
+            model=model.value,
+            display_name=f"{random_string(10)}-{n_times}",  # used to identify the cache
+            system_instruction=system_instruction,
+            contents=gemini_contents,
+            ttl=timedelta(minutes=5),
+        )
+
+        n_messages = [
+            *await asyncio.gather(
+                *[
+                    get_next_message_gemini(
+                        cache=cache, model=model, temperature=temperature
+                    )
+                    for _ in range(n_times)
                 ]
             ),
         ]

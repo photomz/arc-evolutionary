@@ -36,6 +36,8 @@ class Model(str, Enum):
     claude_3_5_haiku = "claude-3-5-haiku-20241022"
     gpt_4o = "gpt-4o"
     gpt_4o_mini = "gpt-4o-mini"
+    o1_mini = "o1-mini"
+    o1_preview = "o1-preview"
     azure_gpt_4o = "azure-gpt-4o"
     azure_gpt_4o_mini = "azure-gpt-4o-mini"
     nvidia_llama_3_1_nemotron_70b_instruct = "nvidia/llama-3.1-nemotron-70b-instruct"
@@ -44,7 +46,8 @@ class Model(str, Enum):
     openrouter_claude_3_5_sonnet = "anthropic/claude-3.5-sonnet:beta"
     openrouter_o1 = "openai/o1-preview"
     openrouter_o1_mini = "openai/o1-mini-preview"
-    gemini_1_5_pro = "gemini-1.5-pro"
+    # gemini_1_5_pro = "gemini-1.5-pro"
+    gemini_1_5_pro = "gemini-1.5-pro-002"
 
 
 class ModelPrice(BaseModel):
@@ -78,6 +81,18 @@ model_price_map: dict[Model, ModelPrice] = {
         cache_read_per_million_cents=7.5,
         input_tokens_per_million_cents=15,
         output_tokens_per_million_cents=60,
+    ),
+    Model.o1_preview: ModelPrice(
+        cache_create_per_million_cents=1500,
+        cache_read_per_million_cents=750,
+        input_tokens_per_million_cents=1500,
+        output_tokens_per_million_cents=6000,
+    ),
+    Model.o1_mini: ModelPrice(
+        cache_create_per_million_cents=300,
+        cache_read_per_million_cents=150,
+        input_tokens_per_million_cents=300,
+        output_tokens_per_million_cents=1200,
     ),
     Model.openrouter_o1: ModelPrice(
         cache_create_per_million_cents=1500,

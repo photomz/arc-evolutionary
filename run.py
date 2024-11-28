@@ -15,8 +15,8 @@ from src.logic import (
     solve_challenge,
     solve_challenge_background,
 )
-from src.models import GRID, Challenge
-from src.trees import prod
+from src.models import GRID, Challenge, RootAttemptConfig
+from src.trees import experiments
 
 
 class ChallengeSolution(BaseModel):
@@ -27,7 +27,7 @@ class ChallengeSolution(BaseModel):
 async def solve_and_write(
     solutions_d: dict[str, list[ChallengeSolution]],
     challenge: Challenge,
-    tree: list[prod.RootAttemptConfig],
+    tree: list[RootAttemptConfig],
     solutions_dir: Path,
     solutions_path: str,
 ) -> None:
@@ -77,7 +77,7 @@ async def solve_and_write(
 async def process_challenges_with_limit(
     challenges: list[Challenge],
     solutions_d: dict[str, list[ChallengeSolution]],
-    tree: list[prod.RootAttemptConfig],
+    tree: list[RootAttemptConfig],
     solutions_dir: Path,
     solutions_path: str,
     max_concurrent: int,
@@ -123,17 +123,22 @@ async def run_from_json(
     challenges_path: str,
     solutions_path: str,
     temp_solutions_dir_path: str,
-    tree: list[prod.RootAttemptConfig],
+    tree: list[RootAttemptConfig],
     limit: int | None,
+    offset: int | None = None,
     only_run_ids: set[str] = None,
     max_concurrent: int,
+    truth_solutions_path: str | None = None,
 ) -> None:
     start = time.time()
     challenges = build_challenges(
-        challenges_path=Path(challenges_path), solutions_path=None
+        challenges_path=Path(challenges_path),
+        solutions_path=Path(truth_solutions_path) if truth_solutions_path else None,
     )
     if only_run_ids:
         challenges = {k: challenges[k] for k in only_run_ids}
+    if offset:
+        challenges = {k: challenges[k] for k in list(challenges)[offset:]}
     if limit:
         # only include the first 10 challenges
         challenges = {k: challenges[k] for k in list(challenges)[:limit]}
@@ -165,17 +170,23 @@ async def run_from_json(
 
 
 async def run() -> None:
+    challenges_path = "arc-prize-2024/arc-agi_training_challenges.json"
+    truth_solutions_path = "arc-prize-2024/arc-agi_training_solutions.json"
+    attempts_solutions_path = "test_data/training_solutions.json"
     await run_from_json(
-        # challenges_path="test_data/challenges.json",
-        challenges_path="arc-prize-2024/arc-agi_evaluation_challenges.json",
-        solutions_path="test_data/eval_solutions.json",
+        challenges_path=challenges_path,
+        solutions_path=attempts_solutions_path,
+        truth_solutions_path=truth_solutions_path,
         temp_solutions_dir_path="test_data/tmp_solutions",
-        tree=prod.one_level_haiku_tree,
-        # tree=prod.prod_kaggle_tree,
-        limit=6,
+        tree=experiments.deep,
+        limit=2,
+        # offset=4,
         max_concurrent=20,
-        # limit=None,
-        # only_run_ids={"009d5c81"},
+        only_run_ids={"045e512c"},
+    )
+    evaluate_solutions(
+        attempts_solutions_path=attempts_solutions_path,
+        truth_solutions_path=truth_solutions_path,
     )
 
 
@@ -201,10 +212,6 @@ def evaluate_solutions(attempts_solutions_path: str, truth_solutions_path: str) 
 
 async def main() -> None:
     await run()
-    evaluate_solutions(
-        attempts_solutions_path="test_data/eval_solutions.json",
-        truth_solutions_path="arc-prize-2024/arc-agi_evaluation_solutions.json",
-    )
 
 
 if __name__ == "__main__":
