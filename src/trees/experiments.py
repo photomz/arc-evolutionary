@@ -11,12 +11,11 @@ from src.models import (
     RootPromptConfig,
 )
 
-# model = Model.claude_3_5_haiku
+model = Model.claude_3_5_sonnet
 # model = Model.gpt_4o
 # model = Model.claude_3_5_sonnet
 # model = Model.gpt_4o_mini
-model = Model.gemini_1_5_pro
-
+# model = Model.gemini_1_5_pro
 
 small_deep: list[RootAttemptConfig] = [
     RootAttemptConfig(
@@ -607,5 +606,181 @@ grid_only: list[RootAttemptConfig] = [
             use_image=False,
         ),
         fixes=[],
+    ),
+]
+
+
+sonnet_writeup_shallow: list[RootAttemptConfig] = [
+    RootAttemptConfig(
+        include_all_attempts_in_fixes=True,
+        attempts=50,
+        llm_config=LLMConfig(
+            model=model,
+            temperature=0.95,
+        ),
+        prompt_config=RootPromptConfig(
+            base_prompt=Prompt.REASONING,
+            use_examples=True,
+            use_diffs=True,
+            use_images=True,
+            use_ascii=True,
+            use_array=True,
+            use_image=True,
+        ),
+        fixes=[],
+    ),
+    RootAttemptConfig(
+        include_all_attempts_in_fixes=True,
+        attempts=50,
+        llm_config=LLMConfig(
+            model=model,
+            temperature=0.95,
+        ),
+        prompt_config=RootPromptConfig(
+            base_prompt=Prompt.REASONING,
+            use_examples=True,
+            use_diffs=True,
+            use_images=True,
+            use_ascii=True,
+            use_array=True,
+            use_image=True,
+        ),
+        fixes=[],
+    ),
+    RootAttemptConfig(
+        include_all_attempts_in_fixes=True,
+        attempts=50,
+        llm_config=LLMConfig(
+            model=model,
+            temperature=0.95,
+        ),
+        prompt_config=RootPromptConfig(
+            base_prompt=Prompt.REASONING,
+            use_examples=True,
+            use_diffs=True,
+            use_images=True,
+            use_ascii=True,
+            use_array=True,
+            use_image=True,
+        ),
+        fixes=[],
+    ),
+    RootAttemptConfig(
+        include_all_attempts_in_fixes=True,
+        attempts=50,
+        llm_config=LLMConfig(
+            model=model,
+            temperature=0.95,
+        ),
+        prompt_config=RootPromptConfig(
+            base_prompt=Prompt.REASONING,
+            use_examples=True,
+            use_diffs=True,
+            use_images=True,
+            use_ascii=True,
+            use_array=True,
+            use_image=True,
+        ),
+        fixes=[],
+    ),
+]
+sonnet_writeup_deep: list[RootAttemptConfig] = [
+    RootAttemptConfig(
+        include_all_attempts_in_fixes=True,
+        attempts=50,
+        llm_config=LLMConfig(
+            model=model,
+            temperature=0.95,
+        ),
+        prompt_config=RootPromptConfig(
+            base_prompt=Prompt.REASONING,
+            use_examples=True,
+            use_diffs=True,
+            use_images=True,
+            use_ascii=True,
+            use_array=True,
+            use_image=True,
+        ),
+        fixes=[
+            AttemptEdge(
+                k_top_config=KTopConfig(
+                    k_top=5, unique_code=False, unique_output=False
+                ),
+                configs=[
+                    FixAttemptConfig(
+                        attempts=10,
+                        llm_config=LLMConfig(
+                            model=model,
+                            temperature=0.95,
+                        ),
+                        prompt_config=FixPromptConfig(
+                            base_prompt=Prompt.REASONING,
+                            use_ascii=True,
+                            use_array=True,
+                            use_image=True,
+                            use_fix_reasoning_tags=True,
+                            use_fix_fail_line=True,
+                            use_typical_issue_text=True,
+                            include_diffs=True,
+                        ),
+                        fixes=[
+                            AttemptEdge(
+                                k_top_config=KTopConfig(
+                                    k_top=5, unique_code=False, unique_output=False
+                                ),
+                                configs=[
+                                    FixAttemptConfig(
+                                        attempts=10,
+                                        llm_config=LLMConfig(
+                                            model=model,
+                                            temperature=0.95,
+                                        ),
+                                        prompt_config=FixPromptConfig(
+                                            base_prompt=Prompt.REASONING,
+                                            use_ascii=True,
+                                            use_array=True,
+                                            use_image=True,
+                                            use_fix_reasoning_tags=True,
+                                            use_fix_fail_line=True,
+                                            use_typical_issue_text=True,
+                                            include_diffs=True,
+                                        ),
+                                        fixes=[
+                                            AttemptEdge(
+                                                k_top_config=KTopConfig(
+                                                    k_top=5,
+                                                    unique_code=False,
+                                                    unique_output=False,
+                                                ),
+                                                configs=[
+                                                    FixAttemptConfig(
+                                                        attempts=10,
+                                                        llm_config=LLMConfig(
+                                                            model=model,
+                                                            temperature=0.95,
+                                                        ),
+                                                        prompt_config=FixPromptConfig(
+                                                            base_prompt=Prompt.REASONING,
+                                                            use_ascii=True,
+                                                            use_array=True,
+                                                            use_image=True,
+                                                            use_fix_reasoning_tags=True,
+                                                            use_fix_fail_line=True,
+                                                            use_typical_issue_text=True,
+                                                            include_diffs=True,
+                                                        ),
+                                                        fixes=[],
+                                                    )
+                                                ],
+                                            )
+                                        ],
+                                    )
+                                ],
+                            )
+                        ],
+                    )
+                ],
+            ),
+        ],
     ),
 ]

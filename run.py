@@ -178,11 +178,12 @@ async def run() -> None:
         solutions_path=attempts_solutions_path,
         truth_solutions_path=truth_solutions_path,
         temp_solutions_dir_path="test_data/tmp_solutions",
-        tree=experiments.deep,
-        limit=2,
-        # offset=4,
+        # tree=experiments.sonnet_writeup_deep,
+        tree=experiments.sonnet_writeup_shallow,
+        limit=10,
+        offset=50,
         max_concurrent=20,
-        only_run_ids={"045e512c"},
+        # only_run_ids={"045e512c"},
     )
     evaluate_solutions(
         attempts_solutions_path=attempts_solutions_path,
