@@ -59,7 +59,7 @@ if not os.getenv("PLOT") or os.environ["PLOT"] == "0":
 else:
     PLOT = True
 
-if os.environ.get("USE_GRID_URL") == "0":
+if os.environ.get("USE_GRID_URL", "0") == "0":
     USE_GRID_URL = False
 else:
     USE_GRID_URL = True
