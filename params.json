@@ -4,7 +4,7 @@
     "main": "writeup.md",
     "sidebar": {
       "writeup": "writeup.md",
-      "README": "README.md"
+      "setup": "README.md"
     }
   }
 }
