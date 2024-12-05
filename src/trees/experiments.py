@@ -856,3 +856,50 @@ sonnet_writeup_med: list[RootAttemptConfig] = [
         ],
     ),
 ]
+sonnet_pooling_example: list[RootAttemptConfig] = [
+    RootAttemptConfig(
+        include_all_attempts_in_fixes=True,
+        attempts=5,
+        llm_config=LLMConfig(
+            model=model,
+            temperature=0.95,
+        ),
+        prompt_config=RootPromptConfig(
+            base_prompt=Prompt.REASONING,
+            use_examples=True,
+            use_diffs=True,
+            use_images=True,
+            use_ascii=True,
+            use_array=True,
+            use_image=True,
+        ),
+        fixes=[
+            AttemptEdge(
+                pooling=(PoolingConfig(size=2)),
+                k_top_config=KTopConfig(
+                    k_top=1, unique_code=False, unique_output=False
+                ),
+                configs=[
+                    FixAttemptConfig(
+                        attempts=1,
+                        llm_config=LLMConfig(
+                            model=model,
+                            temperature=0.95,
+                        ),
+                        prompt_config=FixPromptConfig(
+                            base_prompt=Prompt.REASONING,
+                            use_ascii=True,
+                            use_array=True,
+                            use_image=True,
+                            use_fix_reasoning_tags=True,
+                            use_fix_fail_line=True,
+                            use_typical_issue_text=True,
+                            include_diffs=True,
+                        ),
+                        fixes=[],
+                    )
+                ],
+            ),
+        ],
+    ),
+]
