@@ -3,7 +3,7 @@
   "docs": {
     "main": "writeup.md",
     "sidebar": {
-      "writeup": "writeup.md",
+      "description": "writeup.md",
       "setup": "README.md"
     }
   }
