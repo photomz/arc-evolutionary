@@ -4,7 +4,7 @@ This highlights the core limitation of current LLMs: they're bad at reasoning ab
 
 After reading Ryan Greenblatt’s blog post on how he achieved a state of the art 43% accuracy on ARC-AGI-Pub, I wondered if we could push these models further. Could it be that frontier models might actually possess the necessary intelligence and understanding to solve ARC? Maybe if they are poked and prodded enough, they’ll spit out the right answer.
 
-After lots of experimenting, I got a record of xx% on the public leaderboard using Sonnet 3.5.1 This is a significant improvement over the previous high score (Ryan’s) of 43%.
+After lots of experimenting, I got a record of xx% on the public leaderboard using Sonnet 3.5. This is a significant improvement over the previous high score (Ryan’s) of 43%.
 
 My approach works by having Sonnet 3.5 generate a bunch of Python transform functions, testing them against challenge examples, and then using the best-performing functions to create new prompts for generating even better solutions. This process repeats multiple times, ultimately generating up to 500 functions using 31 dynamic prompts per challenge.
 
