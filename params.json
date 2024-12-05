@@ -1,8 +1,9 @@
 {
   "$schema": "https://params.com/params.json",
   "docs": {
-    "main": "README.md",
+    "main": "writeup.md",
     "sidebar": {
+      "writeup": "writeup.md",
       "README": "README.md"
     }
   }
