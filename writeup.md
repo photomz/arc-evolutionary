@@ -1,4 +1,4 @@
-# How I got 53.6% on ARC-AGI-Pub using Sonnet 3.5 by evolving test-time compute
+# How I came in first on ARC-AGI-Pub using Sonnet 3.5 with Evolutionary Test-time Compute
 I think [ARC-AGI](https://arcprize.org/) is the most important benchmark we have today. It’s surprising that even the most sophisticated Large Language Models (LLMs), like OpenAI o1 and Claude Sonnet 3.5, struggle with simple puzzles that humans can solve easily.
 
 This highlights the core limitation of current LLMs: they're bad at reasoning about things they weren't trained on. They are bad at generalizing.
@@ -8,6 +8,8 @@ After reading Ryan Greenblatt’s [blog post](https://redwoodresearch.substack.c
 After lots of experimenting, I got a [record of 53.6%](https://arcprize.org/leaderboard) on the public leaderboard using Sonnet 3.5.[1](https://jeremyberman.substack.com/p/how-i-got-a-record-536-on-arc-agi#footnote-1-152458109) This is a significant improvement over the previous high score (Ryan’s) of 43%.
 
 My approach works by having Sonnet 3.5 generate a bunch of Python transform functions, testing them against challenge examples, and then using the best-performing functions to create new prompts for generating even better solutions. This process repeats multiple times, ultimately generating up to 500 functions using 31 dynamic prompts per challenge.
+
+I was inspired by [genetic algorithms](https://en.wikipedia.org/wiki/Neuroevolution_of_augmenting_topologies) and have been referring to this approach as **Evolutionary Test-time Compute**.
 
 I have the LLM generate Python functions, instead of just outputting solution grids, because functions can be executed and verified for correctness (detailed in the next section) but grids cannot.
 
@@ -60,7 +62,7 @@ My method gets 53.6% accuracy within the challenge requirements. This is the cur
 
 # My Method
 
-I will start by describing the architecture and then describe the prompting techniques used. Full prompts are provided in Appendix Section 2, so if you are curious what exactly a “revision” or “pooling” prompt looks like, see the Appendix.
+This is a breakdown of how **Evolutionary Test-time Compute** works. **** I will start by describing the architecture and then describe the prompting techniques used. Full prompts are provided in Appendix Section 2, so if you are curious what exactly a “revision” or “pooling” prompt looks like, see the Appendix.
 
 ## Architecture
 
@@ -300,7 +302,7 @@ The key is finding the sweet spot where you have enough attempts per generation 
 
 I'll walk through my prompting approach here, with the full prompts available in Appendix 2.
 
-My strategy relies heavily on Chain-of-Thought (COT) prompting — requiring the LLM to reason through its solution step by step before answering. This technique has [proven particularly effective](https://arxiv.org/abs/2201.11903) for reasoning tasks, which I explore more deeply in next section.
+My strategy relies heavily on Chain-of-Thought (CoT) prompting — requiring the LLM to reason through its solution step by step before answering. This technique has [proven particularly effective](https://arxiv.org/abs/2201.11903) for reasoning tasks, which I explore more deeply in next section.
 
 Following Ryan's methodology, I implemented one-shot prompting by providing a single detailed example of a correct solution. While I experimented with two and three-shot approaches, one-shot consistently performed best. I suspect this is because LLMs [maintain better focus with concise prompts](https://arxiv.org/html/2404.02060v2) \- they seem to benefit more from deeply understanding one example rather than partially grasping several.
 
@@ -321,7 +323,7 @@ Though providing all of these formats might appear redundant, testing showed tha
 
 For detailed implementation, refer to:
 
-  * COT prompts: Appendix 2.1
+  * CoT prompts: Appendix 2.1
 
   * LLM responses: Appendix 2.2
 
@@ -337,6 +339,8 @@ For detailed implementation, refer to:
 
 
 # ARC and the Path to AGI
+
+Working on ARC has got me thinking a lot about how humans think.
 
 One key difference between how humans and current LLMs solve ARC is that humans use [deductive reasoning](https://en.wikipedia.org/wiki/Deductive_reasoning).
 
@@ -362,7 +366,7 @@ LLMs are trained with induction. They learn by predicting the next word in a seq
 
 Because they’re so good at outputting correct-sounding words in a sequence, their outputs will often be logically correct. For, it’s more likely that correct-sounding words are logically correct than incorrect-sounding words. A parrot that lives in a courthouse will regurgitate more correct statements than a parrot that lives in a madhouse.
 
-This explains why Chain-of-Thought (COT) prompting, test-time compute and other strategies that “let the LLM think” are effective. These strategies tell LLMs to “use step by step reasoning”, the way a human would, to solve a problem. With COT, LLMs do their best impressions of deduction. And because LLMs are good at impressions, they often guess correct lines of deduction. This makes the conclusions more likely to be correct.
+This explains why Chain-of-Thought (CoT) prompting, test-time compute and other strategies that “let the LLM think” are effective. These strategies tell LLMs to “use step by step reasoning”, the way a human would, to solve a problem. With CoT, LLMs do their best impressions of deduction. And because LLMs are good at impressions, they often guess correct lines of deduction. This makes the conclusions more likely to be correct.
 
 It may seem harsh to call what LLMs do “guessing” — it’s highly educated guessing, to be fair. But that’s exactly what they’re doing. In fact, induction, by definition, is guessing. You use past experience, not premises or understanding, to draw conclusions. There is no “reason” why past experience will hold, or that you are extrapolating the correct conclusion from your experience. Induction is inherently probabilistic. Deduction is not.
 
@@ -406,7 +410,7 @@ A key innovation in JEPA is that it optimizes predictions directly in feature sp
 
 This idea could be adapted for language models by using current LLMs to identify conceptual segments in training text, then masking these segments and training the model to predict their feature-level representations from surrounding context.
 
-By focusing on relationships in feature space rather than raw token sequences, we steer models toward representing more stable, concept-level abstractions. This conceptual shift could support the emergence of genuine deductive reasoning capabilities, since deduction involves understanding how concepts imply one another. If we train models to predict and manipulate concept-level relationships, the underlying structures necessary for deduction might naturally arise.
+By optimizing directly in feature space rather than token space, we align the learning objective with what we actually care about: coherent manipulation of concepts. While current models develop rich conceptual representations internally, they're only optimized to predict tokens — any conceptual understanding is incidental to that surface-level task. When we instead make concept-level predictions the actual optimization target, we directly optimize for what deduction requires: the ability to understand necessary relationships between abstract concepts. By making the model's success contingent on accurately predicting how concepts relate and transform — rather than just predicting tokens — we optimize for the very capability we're trying to build.
 
 Just as human thought operates at a conceptual level rather than fixating on the particular words used, guiding models toward conceptual reasoning could represent a vital step toward more robust and general artificial intelligence.
 
@@ -439,7 +443,7 @@ Using a variety of frontier models, each with unique “brains”, would have li
 
 #### Prompt Diversity
 
-I tested a bunch of prompts and examples to put in the prompts. I found different COT prompts performed roughly the same. That is, changing the wording around how the LLM should reason or what <reasoning> tags to use doesn’t change the result in a meaningful way[4](https://jeremyberman.substack.com/p/how-i-got-a-record-536-on-arc-agi#footnote-4-152458109). I ended up using one of Ryan’s COT prompts with a few tweaks.
+I tested a bunch of prompts and examples to put in the prompts. I found different CoT prompts performed roughly the same. That is, changing the wording around how the LLM should reason or what <reasoning> tags to use doesn’t change the result in a meaningful way[4](https://jeremyberman.substack.com/p/how-i-got-a-record-536-on-arc-agi#footnote-4-152458109). I ended up using one of Ryan’s CoT prompts with a few tweaks.
 
 The example(s) to include in the prompts matter more, as expected. If the solution requires a vertical transformation, including an example with a similar transformation will be useful.
 
@@ -454,9 +458,9 @@ I tested a lot of examples and found the one that worked the best the most times
 
 #### Finetune LLMs
 
-I think there’s a reasonable chance ARC could be solved if you fine-tuned Sonnet 3.5 on a 10,000 diverse, correct COT solutions for the train and eval sets — assuming all of the core knowledge necessary to solve ARC is in those sets.
+I think there’s a reasonable chance ARC could be solved if you fine-tuned Sonnet 3.5 on a 10,000 diverse, correct CoT solutions for the train and eval sets — assuming all of the core knowledge necessary to solve ARC is in those sets.
 
-With fine-tuning, you wouldn’t even need to give examples in context. Sonnet 3.5 could pull core knowledge (in this case, COT for creating grid-solving Python functions) from training.
+With fine-tuning, you wouldn’t even need to give examples in context. Sonnet 3.5 could pull core knowledge (in this case, CoT for creating grid-solving Python functions) from training.
 
 You could get the many training examples by running my program on ARC thousands of times, fine-tuning the model on each correct output. For the challenges it still can’t solve, you may need to hand-write the answer for fine-tuning.
 
@@ -506,7 +510,7 @@ Final Step: Take all functions generated across both tracks and all generations,
 
 ## 2.1
 
-I have two versions of COT I use. For my submission, I used Version 1 since it has ~1/2 the number of tokens and I wanted to make sure my submission ran on time and budget.
+I have two versions of CoT I use. For my submission, I used Version 1 since it has ~1/2 the number of tokens and I wanted to make sure my submission ran on time and budget.
 
  _Version 1 (taken from Ryan’s submission)_
 
@@ -516,11 +520,11 @@ I have two versions of COT I use. For my submission, I used Version 1 since it h
 
 [![](https://substackcdn.com/image/fetch/w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa60053a1-4d15-4c5c-b240-54e2cc01b3a3_2048x1228.png)](https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa60053a1-4d15-4c5c-b240-54e2cc01b3a3_2048x1228.png)
 
-I tried a ton of COT prompts and made lots of updates to existing ones. I found that for the frontier models, it didn’t matter much. Once you get them to reason step by step, the accuracy doesn’t change meaningfully.
+I tried a ton of CoT prompts and made lots of updates to existing ones. I found that for the frontier models, it didn’t matter much. Once you get them to reason step by step, the accuracy doesn’t change meaningfully.
 
 ## 2.2
 
-This is how the LLM responds to my COT prompts. As you can see, it does a convincing job of imitating reasoning.
+This is how the LLM responds to my CoT prompts. As you can see, it does a convincing job of imitating reasoning.
 
 [![](https://substackcdn.com/image/fetch/w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F9b1c4c35-635c-4a3f-96dd-19055bd1ba4f_2048x4468.png)](https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F9b1c4c35-635c-4a3f-96dd-19055bd1ba4f_2048x4468.png)
 
