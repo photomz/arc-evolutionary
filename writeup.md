@@ -13,3 +13,5 @@ I have the LLM generate Python functions, instead of just outputting solution gr
 While this approach is computationally intensive compared to human intuitive reasoning, it may hint at a path forward. LLMs can compensate for their generalization limitations through scaled test-time compute guided by evolutionary principles. By generating waves of candidate solutions and using their performance to guide further compute allocation, we can efficiently explore the solution space even with limited prior knowledge. It's possible that this kind of test-time compute scaling is how Artificial General Intelligence (AGI) emerges.
 
 The key to solving ARC may be the key to solving AGI.
+
+For the rest of this writeup, click [here.](https://jeremyberman.substack.com/p/how-i-got-a-record-536-on-arc-agi)
