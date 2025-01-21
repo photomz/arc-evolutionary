@@ -433,11 +433,11 @@ class Attempt(BaseModel):
         start_grid = time.time()
         llm_responses = [m[0] for m in next_messages]
         grid_lists = None
-        if USE_GRID_URL and os.environ.get("GRID_URL"):
+        if USE_GRID_URL:
             try:
                 async with httpx.AsyncClient(timeout=120) as client:
                     r = await client.post(
-                        url=os.environ["GRID_URL"],
+                        url="https://arc-agi-grid-306099487123.us-central1.run.app/llm_responses_to_grid_list",
                         json={
                             "llm_responses": llm_responses,
                             "challenge": Challenge.model_dump(challenge, mode="json"),
