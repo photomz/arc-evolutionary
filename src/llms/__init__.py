@@ -100,6 +100,62 @@ async def get_next_message_anthropic(
     return message.content[-1].text, usage
 
 
+async def get_next_message_deepseek(
+    deepseek_client: AsyncOpenAI,
+    messages: list[dict[str, T.Any]],
+    model: Model,
+    temperature: float,
+    retry_secs: int = 15,
+    max_retries: int = 50,
+) -> tuple[str, ModelUsage] | None:
+    retry_count = 0
+    messages_new = [
+        {"role": "system", "content": "talk like a duck"},
+        {"role": "user", "content": "hey how are you?"},
+    ]
+    # debug(messages)
+    params = {
+        "temperature": temperature,
+        "max_tokens": 8192,
+        "messages": messages,
+        "model": model.value,
+        "timeout": 250,
+    }
+    if model in [Model.o1_preview, Model.o1_mini]:
+        params["max_completion_tokens"] = params["max_tokens"]
+        del params["max_tokens"]
+        del params["temperature"]
+    while True:
+        try:
+            request_id = random_string()
+            start = time.time()
+            logfire.debug(f"[{request_id}] calling deepseek...")
+            message = await deepseek_client.chat.completions.create(**params)
+            # debug(message)
+            took_ms = (time.time() - start) * 1000
+            cached_tokens = message.usage.prompt_tokens_details.cached_tokens
+            usage = ModelUsage(
+                cache_creation_input_tokens=0,
+                cache_read_input_tokens=cached_tokens,
+                input_tokens=message.usage.prompt_tokens - cached_tokens,
+                output_tokens=message.usage.completion_tokens,
+            )
+            logfire.debug(
+                f"[{request_id}] got back deepseek, took {took_ms:.2f}, {usage}, cost_cents={Attempt.cost_cents_from_usage(model=model, usage=usage)}"
+            )
+            break  # Success, exit the loop
+        except Exception as e:
+            logfire.debug(
+                f"Other deepseek error: {str(e)}, retrying in {retry_count} seconds ({retry_count}/{max_retries})..."
+            )
+            retry_count += 1
+            if retry_count >= max_retries:
+                # raise  # Re-raise the exception after max retries
+                return None
+            await asyncio.sleep(retry_secs)
+    return message.choices[0].message.content, usage
+
+
 async def get_next_message_openai(
     openai_client: AsyncOpenAI,
     messages: list[dict[str, T.Any]],
@@ -107,6 +163,7 @@ async def get_next_message_openai(
     temperature: float,
     retry_secs: int = 15,
     max_retries: int = 50,
+    name: str = "openai",
 ) -> tuple[str, ModelUsage] | None:
     retry_count = 0
     params = {
@@ -135,12 +192,12 @@ async def get_next_message_openai(
                 output_tokens=message.usage.completion_tokens,
             )
             logfire.debug(
-                f"[{request_id}] got back openai, took {took_ms:.2f}, {usage}, cost_cents={Attempt.cost_cents_from_usage(model=model, usage=usage)}"
+                f"[{request_id}] got back {name}, took {took_ms:.2f}, {usage}, cost_cents={Attempt.cost_cents_from_usage(model=model, usage=usage)}"
             )
             break  # Success, exit the loop
         except Exception as e:
             logfire.debug(
-                f"Other openai error: {str(e)}, retrying in {retry_count} seconds ({retry_count}/{max_retries})..."
+                f"Other {name} error: {str(e)}, retrying in {retry_count} seconds ({retry_count}/{max_retries})..."
             )
             retry_count += 1
             if retry_count >= max_retries:
@@ -287,6 +344,33 @@ async def get_next_messages(
                 *[
                     get_next_message_openai(
                         openai_client=openai_client,
+                        messages=messages,
+                        model=model,
+                        temperature=temperature,
+                    )
+                    for _ in range(n_times - 1)
+                ]
+            ),
+        ]
+        # filter out the Nones
+        return [m for m in n_messages if m]
+    elif model in [Model.deep_seek_r1]:
+        deepseek_client = AsyncOpenAI(
+            api_key=os.environ["DEEPSEEK_API_KEY"], base_url="https://api.deepseek.com"
+        )
+        messages = text_only_messages(messages)
+
+        n_messages = [
+            await get_next_message_deepseek(
+                deepseek_client=deepseek_client,
+                messages=messages,
+                model=model,
+                temperature=temperature,
+            ),
+            *await asyncio.gather(
+                *[
+                    get_next_message_deepseek(
+                        deepseek_client=deepseek_client,
                         messages=messages,
                         model=model,
                         temperature=temperature,

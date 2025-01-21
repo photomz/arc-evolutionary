@@ -903,3 +903,23 @@ sonnet_pooling_example: list[RootAttemptConfig] = [
         ],
     ),
 ]
+deepseek_pooling_example: list[RootAttemptConfig] = [
+    RootAttemptConfig(
+        include_all_attempts_in_fixes=True,
+        attempts=50,
+        llm_config=LLMConfig(
+            model=Model.deep_seek_r1,
+            temperature=0.95,
+        ),
+        prompt_config=RootPromptConfig(
+            base_prompt=Prompt.REASONING,
+            use_examples=True,
+            use_diffs=True,
+            use_images=True,
+            use_ascii=True,
+            use_array=True,
+            use_image=True,
+        ),
+        fixes=[],
+    ),
+]

@@ -16,7 +16,7 @@ from src.logic import (
     solve_challenge_background,
 )
 from src.models import GRID, Challenge, RootAttemptConfig
-from src.trees import experiments
+from src.trees import deepseek, experiments
 
 
 class ChallengeSolution(BaseModel):
@@ -181,11 +181,13 @@ async def run() -> None:
         # tree=experiments.sonnet_writeup_deep,
         # tree=experiments.sonnet_writeup_shallow,
         # tree=experiments.sonnet_writeup_med,
-        tree=experiments.sonnet_pooling_example,
+        # tree=experiments.sonnet_pooling_example,
+        # tree=experiments.deepseek_pooling_example,
+        tree=deepseek.prod_kaggle_tree,
         # limit=10,
         # offset=50,
-        limit=1,
-        offset=1,
+        limit=10,
+        offset=0,
         max_concurrent=20,
         # only_run_ids={"045e512c"},
     )
