@@ -109,11 +109,7 @@ async def get_next_message_deepseek(
     max_retries: int = 50,
 ) -> tuple[str, ModelUsage] | None:
     retry_count = 0
-    messages_new = [
-        {"role": "system", "content": "talk like a duck"},
-        {"role": "user", "content": "hey how are you?"},
-    ]
-    # debug(messages)
+    MAX_CONTEXT_LENGTH = 65536
     params = {
         "temperature": temperature,
         "max_tokens": 8192,
@@ -121,17 +117,12 @@ async def get_next_message_deepseek(
         "model": model.value,
         "timeout": 250,
     }
-    if model in [Model.o1_preview, Model.o1_mini]:
-        params["max_completion_tokens"] = params["max_tokens"]
-        del params["max_tokens"]
-        del params["temperature"]
     while True:
         try:
             request_id = random_string()
             start = time.time()
             logfire.debug(f"[{request_id}] calling deepseek...")
             message = await deepseek_client.chat.completions.create(**params)
-            # debug(message)
             took_ms = (time.time() - start) * 1000
             cached_tokens = message.usage.prompt_tokens_details.cached_tokens
             usage = ModelUsage(
@@ -145,12 +136,26 @@ async def get_next_message_deepseek(
             )
             break  # Success, exit the loop
         except Exception as e:
+            error_msg = str(e)
+            # Try to extract prompt tokens from error message
+            if "tokens (" in error_msg:
+                try:
+                    prompt_tokens = int(
+                        error_msg.split("(")[1].split(" in the messages")[0]
+                    )
+                    max_completion_tokens = MAX_CONTEXT_LENGTH - prompt_tokens
+                    if max_completion_tokens <= 0:
+                        return None
+                    params["max_tokens"] = min(8192, max_completion_tokens)
+                except (IndexError, ValueError):
+                    pass  # If parsing fails, continue with normal retry logic
+                    # raise e
+
             logfire.debug(
-                f"Other deepseek error: {str(e)}, retrying in {retry_count} seconds ({retry_count}/{max_retries})..."
+                f"Other deepseek error: {error_msg}, retrying in {retry_count} seconds ({retry_count}/{max_retries})..."
             )
             retry_count += 1
             if retry_count >= max_retries:
-                # raise  # Re-raise the exception after max retries
                 return None
             await asyncio.sleep(retry_secs)
     return message.choices[0].message.content, usage

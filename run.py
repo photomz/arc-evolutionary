@@ -186,7 +186,7 @@ async def run() -> None:
         tree=deepseek.prod_kaggle_tree,
         # limit=10,
         # offset=50,
-        limit=10,
+        limit=2,
         offset=0,
         max_concurrent=20,
         # only_run_ids={"045e512c"},
