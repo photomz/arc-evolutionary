@@ -11,7 +11,7 @@ from src.models import (
     RootPromptConfig,
 )
 
-model = Model.deep_seek_r1
+model = Model.o3_mini
 
 prod_kaggle_tree: list[RootAttemptConfig] = [
     RootAttemptConfig(
@@ -24,10 +24,10 @@ prod_kaggle_tree: list[RootAttemptConfig] = [
             base_prompt=Prompt.REASONING,
             use_examples=True,
             use_diffs=True,
-            use_images=True,
+            use_images=False,
             use_ascii=True,
             use_array=True,
-            use_image=True,
+            use_image=False,
         ),
         fixes=[],
     ),
@@ -42,10 +42,10 @@ prod_kaggle_tree: list[RootAttemptConfig] = [
             base_prompt=Prompt.REASONING,
             use_examples=True,
             use_diffs=True,
-            use_images=True,
+            use_images=False,
             use_ascii=True,
             use_array=True,
-            use_image=True,
+            use_image=False,
         ),
         fixes=[
             AttemptEdge(
@@ -63,7 +63,7 @@ prod_kaggle_tree: list[RootAttemptConfig] = [
                             base_prompt=Prompt.REASONING,
                             use_ascii=True,
                             use_array=True,
-                            use_image=True,
+                            use_image=False,
                             use_fix_reasoning_tags=True,
                             use_fix_fail_line=True,
                             use_typical_issue_text=True,
@@ -85,7 +85,7 @@ prod_kaggle_tree: list[RootAttemptConfig] = [
                                             base_prompt=Prompt.REASONING,
                                             use_ascii=True,
                                             use_array=True,
-                                            use_image=True,
+                                            use_image=False,
                                             use_fix_reasoning_tags=True,
                                             use_fix_fail_line=True,
                                             use_typical_issue_text=True,
@@ -109,7 +109,7 @@ prod_kaggle_tree: list[RootAttemptConfig] = [
                                                             base_prompt=Prompt.REASONING,
                                                             use_ascii=True,
                                                             use_array=True,
-                                                            use_image=True,
+                                                            use_image=False,
                                                             use_fix_reasoning_tags=True,
                                                             use_fix_fail_line=True,
                                                             use_typical_issue_text=True,
@@ -143,7 +143,7 @@ prod_kaggle_tree: list[RootAttemptConfig] = [
                             base_prompt=Prompt.REASONING,
                             use_ascii=True,
                             use_array=True,
-                            use_image=True,
+                            use_image=False,
                             use_fix_reasoning_tags=True,
                             use_fix_fail_line=True,
                             use_typical_issue_text=True,
@@ -166,7 +166,7 @@ prod_kaggle_tree: list[RootAttemptConfig] = [
                                             base_prompt=Prompt.REASONING,
                                             use_ascii=True,
                                             use_array=True,
-                                            use_image=True,
+                                            use_image=False,
                                             use_fix_reasoning_tags=True,
                                             use_fix_fail_line=True,
                                             use_typical_issue_text=True,
@@ -183,64 +183,89 @@ prod_kaggle_tree: list[RootAttemptConfig] = [
         ],
     ),
 ]
-
-small_baseten_tree: list[RootAttemptConfig] = [
+small_tree: list[RootAttemptConfig] = [
     RootAttemptConfig(
-        attempts=5,
+        attempts=25,
         llm_config=LLMConfig(
-            model=Model.baseten_deepseek_r1,
+            model=model,
             temperature=0.95,
         ),
         prompt_config=RootPromptConfig(
             base_prompt=Prompt.REASONING,
             use_examples=True,
             use_diffs=True,
-            use_images=True,
+            use_images=False,
             use_ascii=True,
             use_array=True,
-            use_image=True,
+            use_image=False,
         ),
         fixes=[],
     ),
     RootAttemptConfig(
         include_all_attempts_in_fixes=True,
-        attempts=20,
+        attempts=50,
         llm_config=LLMConfig(
-            model=Model.baseten_deepseek_r1,
+            model=model,
             temperature=0.95,
         ),
         prompt_config=RootPromptConfig(
             base_prompt=Prompt.REASONING,
             use_examples=True,
             use_diffs=True,
-            use_images=True,
+            use_images=False,
             use_ascii=True,
             use_array=True,
-            use_image=True,
+            use_image=False,
         ),
         fixes=[
             AttemptEdge(
                 k_top_config=KTopConfig(
-                    k_top=10, unique_code=False, unique_output=False
+                    k_top=5, unique_code=False, unique_output=False
                 ),
                 configs=[
                     FixAttemptConfig(
-                        attempts=4,
+                        attempts=5,
                         llm_config=LLMConfig(
-                            model=Model.baseten_deepseek_r1,
+                            model=model,
                             temperature=0.95,
                         ),
                         prompt_config=FixPromptConfig(
                             base_prompt=Prompt.REASONING,
                             use_ascii=True,
                             use_array=True,
-                            use_image=True,
+                            use_image=False,
                             use_fix_reasoning_tags=True,
                             use_fix_fail_line=True,
                             use_typical_issue_text=True,
                             include_diffs=True,
                         ),
-                        fixes=[],
+                        fixes=[
+                            AttemptEdge(
+                                k_top_config=KTopConfig(
+                                    k_top=5, unique_code=False, unique_output=False
+                                ),
+                                configs=[
+                                    FixAttemptConfig(
+                                        attempts=5,
+                                        llm_config=LLMConfig(
+                                            model=model,
+                                            temperature=0.95,
+                                        ),
+                                        prompt_config=FixPromptConfig(
+                                            base_prompt=Prompt.REASONING,
+                                            use_ascii=True,
+                                            use_array=True,
+                                            use_image=False,
+                                            use_fix_reasoning_tags=True,
+                                            use_fix_fail_line=True,
+                                            use_typical_issue_text=True,
+                                            include_diffs=True,
+                                        ),
+                                        fixes=[],
+                                    )
+                                ],
+                            )
+                        ],
                     )
                 ],
             ),
@@ -253,14 +278,14 @@ small_baseten_tree: list[RootAttemptConfig] = [
                     FixAttemptConfig(
                         attempts=5,
                         llm_config=LLMConfig(
-                            model=Model.baseten_deepseek_r1,
+                            model=model,
                             temperature=0.95,
                         ),
                         prompt_config=FixPromptConfig(
                             base_prompt=Prompt.REASONING,
                             use_ascii=True,
                             use_array=True,
-                            use_image=True,
+                            use_image=False,
                             use_fix_reasoning_tags=True,
                             use_fix_fail_line=True,
                             use_typical_issue_text=True,
@@ -276,14 +301,14 @@ small_baseten_tree: list[RootAttemptConfig] = [
                                     FixAttemptConfig(
                                         attempts=5,
                                         llm_config=LLMConfig(
-                                            model=Model.baseten_deepseek_r1,
+                                            model=model,
                                             temperature=0.95,
                                         ),
                                         prompt_config=FixPromptConfig(
                                             base_prompt=Prompt.REASONING,
                                             use_ascii=True,
                                             use_array=True,
-                                            use_image=True,
+                                            use_image=False,
                                             use_fix_reasoning_tags=True,
                                             use_fix_fail_line=True,
                                             use_typical_issue_text=True,

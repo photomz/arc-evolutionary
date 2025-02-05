@@ -37,6 +37,7 @@ class Model(str, Enum):
     gpt_4o = "gpt-4o"
     gpt_4o_mini = "gpt-4o-mini"
     o1_mini = "o1-mini"
+    o3_mini = "o3-mini"
     o1_preview = "o1-preview"
     azure_gpt_4o = "azure-gpt-4o"
     azure_gpt_4o_mini = "azure-gpt-4o-mini"
@@ -49,6 +50,7 @@ class Model(str, Enum):
     # gemini_1_5_pro = "gemini-1.5-pro"
     gemini_1_5_pro = "gemini-1.5-pro-002"
     deep_seek_r1 = "deepseek-reasoner"
+    baseten_deepseek_r1 = "baseten_deepseek_r1"
 
 
 class ModelPrice(BaseModel):
@@ -124,6 +126,18 @@ model_price_map: dict[Model, ModelPrice] = {
         cache_read_per_million_cents=14,
         input_tokens_per_million_cents=55,
         output_tokens_per_million_cents=219,
+    ),
+    Model.baseten_deepseek_r1: ModelPrice(  # TODO change eventually
+        cache_create_per_million_cents=55,
+        cache_read_per_million_cents=14,
+        input_tokens_per_million_cents=55,
+        output_tokens_per_million_cents=219,
+    ),
+    Model.o3_mini: ModelPrice(
+        cache_create_per_million_cents=110,
+        cache_read_per_million_cents=55,
+        input_tokens_per_million_cents=110,
+        output_tokens_per_million_cents=440,
     ),
 }
 
