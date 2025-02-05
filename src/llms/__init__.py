@@ -218,7 +218,7 @@ async def get_next_message_openai(
     model: Model,
     temperature: float,
     retry_secs: int = 15,
-    max_retries: int = 50,
+    max_retries: int = 15,
     name: str = "openai",
 ) -> tuple[str, ModelUsage] | None:
     retry_count = 0
@@ -394,6 +394,8 @@ async def get_next_messages(
         )
         if messages[0]["role"] == "system":
             messages[0]["role"] = "developer"
+        if model in [Model.o1_mini, Model.o1_preview, Model.o3_mini]:
+            messages = text_only_messages(messages=messages)
 
         n_messages = [
             await get_next_message_openai(
