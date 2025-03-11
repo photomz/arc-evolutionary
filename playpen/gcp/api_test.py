@@ -1,22 +1,23 @@
+from google import genai
 import os
-
-import google.generativeai as genai
 from devtools import debug
 from dotenv import load_dotenv
 
-from playpen.azure.test_api import messages
-
 load_dotenv()
 
-genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+client = genai.Client(
+    api_key=os.environ["GEMINI_API_KEY"], http_options={"api_version": "v1alpha"}
+)
 
 
 async def main() -> None:
-    model = genai.GenerativeModel("gemini-1.5-pro")
-    response = await model.generate_content_async(
-        contents=[{"role": "user", "content": "Write a story about a magic backpack."}],
+    response = await client.aio.models.generate_content_stream(
+        model="gemini-2.0-flash-thinking-exp",
+        contents="Explain how RLHF works in simple terms.",
     )
-    debug(response)
+
+    async for chunk in response:
+        debug(chunk)
 
 
 if __name__ == "__main__":

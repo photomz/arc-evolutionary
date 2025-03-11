@@ -183,14 +183,14 @@ async def run() -> None:
         # tree=experiments.sonnet_writeup_med,
         # tree=experiments.sonnet_pooling_example,
         # tree=experiments.deepseek_pooling_example,
-        # tree=deepseek.prod_kaggle_tree,
+        tree=deepseek.prod_kaggle_tree,
         # tree=deepseek.small_baseten_tree,
-        tree=o3.small_tree,
+        # tree=o3.small_tree,
         # limit=10,
         # offset=50,
         limit=1,
         offset=0,
-        max_concurrent=20,
+        max_concurrent=8,
         only_run_ids={"045e512c"},
     )
     evaluate_solutions(

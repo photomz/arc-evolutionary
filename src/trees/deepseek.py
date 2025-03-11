@@ -15,7 +15,7 @@ model = Model.deep_seek_r1
 
 prod_kaggle_tree: list[RootAttemptConfig] = [
     RootAttemptConfig(
-        attempts=50,
+        attempts=3,  # 50,
         llm_config=LLMConfig(
             model=model,
             temperature=0.95,
@@ -33,7 +33,7 @@ prod_kaggle_tree: list[RootAttemptConfig] = [
     ),
     RootAttemptConfig(
         include_all_attempts_in_fixes=True,
-        attempts=200,
+        attempts=3,  # 200,
         llm_config=LLMConfig(
             model=model,
             temperature=0.95,
@@ -54,7 +54,7 @@ prod_kaggle_tree: list[RootAttemptConfig] = [
                 ),
                 configs=[
                     FixAttemptConfig(
-                        attempts=10,
+                        attempts=1,  # 10,
                         llm_config=LLMConfig(
                             model=model,
                             temperature=0.95,
@@ -76,7 +76,7 @@ prod_kaggle_tree: list[RootAttemptConfig] = [
                                 ),
                                 configs=[
                                     FixAttemptConfig(
-                                        attempts=10,
+                                        attempts=1,  # 10,
                                         llm_config=LLMConfig(
                                             model=model,
                                             temperature=0.95,
@@ -100,7 +100,7 @@ prod_kaggle_tree: list[RootAttemptConfig] = [
                                                 ),
                                                 configs=[
                                                     FixAttemptConfig(
-                                                        attempts=10,
+                                                        attempts=1,  # 10,
                                                         llm_config=LLMConfig(
                                                             model=model,
                                                             temperature=0.95,
@@ -134,7 +134,7 @@ prod_kaggle_tree: list[RootAttemptConfig] = [
                 ),
                 configs=[
                     FixAttemptConfig(
-                        attempts=5,
+                        attempts=1,  # 5,
                         llm_config=LLMConfig(
                             model=model,
                             temperature=0.95,
@@ -157,7 +157,7 @@ prod_kaggle_tree: list[RootAttemptConfig] = [
                                 ),
                                 configs=[
                                     FixAttemptConfig(
-                                        attempts=5,
+                                        attempts=1,  # 5,
                                         llm_config=LLMConfig(
                                             model=model,
                                             temperature=0.95,
@@ -186,7 +186,7 @@ prod_kaggle_tree: list[RootAttemptConfig] = [
 
 small_baseten_tree: list[RootAttemptConfig] = [
     RootAttemptConfig(
-        attempts=5,
+        attempts=1,  # 5,
         llm_config=LLMConfig(
             model=Model.baseten_deepseek_r1,
             temperature=0.95,
@@ -204,7 +204,7 @@ small_baseten_tree: list[RootAttemptConfig] = [
     ),
     RootAttemptConfig(
         include_all_attempts_in_fixes=True,
-        attempts=20,
+        attempts=1,  # 20,
         llm_config=LLMConfig(
             model=Model.baseten_deepseek_r1,
             temperature=0.95,
@@ -225,7 +225,7 @@ small_baseten_tree: list[RootAttemptConfig] = [
                 ),
                 configs=[
                     FixAttemptConfig(
-                        attempts=4,
+                        attempts=1,  # 4,
                         llm_config=LLMConfig(
                             model=Model.baseten_deepseek_r1,
                             temperature=0.95,
@@ -251,7 +251,7 @@ small_baseten_tree: list[RootAttemptConfig] = [
                 ),
                 configs=[
                     FixAttemptConfig(
-                        attempts=5,
+                        attempts=1,  # 5,
                         llm_config=LLMConfig(
                             model=Model.baseten_deepseek_r1,
                             temperature=0.95,
@@ -274,7 +274,7 @@ small_baseten_tree: list[RootAttemptConfig] = [
                                 ),
                                 configs=[
                                     FixAttemptConfig(
-                                        attempts=5,
+                                        attempts=1,  # 5,
                                         llm_config=LLMConfig(
                                             model=Model.baseten_deepseek_r1,
                                             temperature=0.95,

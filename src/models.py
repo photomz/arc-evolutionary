@@ -166,10 +166,11 @@ class FixInfo(BaseModel):
 
 
 class ModelUsage(BaseModel):
-    cache_creation_input_tokens: int
-    cache_read_input_tokens: int
-    input_tokens: int
-    output_tokens: int
+    cache_creation_input_tokens: int = 0
+    cache_read_input_tokens: int = 0
+    input_tokens: int = 0
+    output_tokens: int = 0
+    reasoning_tokens: int = 0
 
 
 class KTopConfig(BaseModel):
@@ -430,75 +431,82 @@ class Attempt(BaseModel):
     ) -> list["Attempt"]:
         from src.llms import get_next_messages
 
-        try:
-            next_messages = await get_next_messages(
-                messages=deepcopy(messages),
-                model=attempt_config.llm_config.model,
-                temperature=attempt_config.llm_config.temperature,
-                n_times=n_times,
-            )
-            if not next_messages:
+        with logfire.span(f"[{challenge.id}] Generate Batch (get_next_messages)"):
+            try:
+                next_messages = await get_next_messages(
+                    messages=deepcopy(messages),
+                    model=attempt_config.llm_config.model,
+                    temperature=attempt_config.llm_config.temperature,
+                    n_times=n_times,
+                )
+                if not next_messages:
+                    return []
+            except Exception as e:
+                logfire.debug(
+                    f"[{challenge.id}] BIG PROBLEM***** Error getting next messages: {e}"
+                )
                 return []
-        except Exception as e:
-            logfire.debug(
-                f"[{challenge.id}] BIG PROBLEM***** Error getting next messages: {e}"
-            )
-            return []
         start_grid = time.time()
         llm_responses = [m[0] for m in next_messages]
         grid_lists = None
-        if USE_GRID_URL:
-            try:
-                async with httpx.AsyncClient(timeout=120) as client:
-                    r = await client.post(
-                        url="https://arc-agi-grid-306099487123.us-central1.run.app/llm_responses_to_grid_list",
-                        json={
-                            "llm_responses": llm_responses,
-                            "challenge": Challenge.model_dump(challenge, mode="json"),
-                        },
-                        params={
-                            "returns_python": attempt_config.prompt_config.returns_python
-                        },
-                    )
-                    logfire.debug(
-                        f"[{challenge.id}] getting grid from server took {r.elapsed.total_seconds()}"
-                    )
-                grid_lists = r.json()
-            except Exception as e:
-                logfire.debug(f"ERROR RUNNING GRIDLISTS SERVER: {e}")
-                grid_lists = None
-
-        if grid_lists is None:
-            grid_lists = await cls.llm_responses_to_result_grids_list(
-                llm_responses=llm_responses,
-                challenge=challenge,
-                returns_python=attempt_config.prompt_config.returns_python,
-            )
-        logfire.debug(f"[{challenge.id}] grids took {time.time() - start_grid} secs")
-        attempts: list[Attempt] = []
-        for next_message, grid_list in zip(next_messages, grid_lists, strict=True):
-            if grid_list:
-                python_str, test_grid, train_grids = grid_list
-                llm_response, usage = next_message
-                attempts.append(
-                    Attempt(
-                        id=f"{challenge.id}-{random_string()}",
-                        challenge=challenge,
-                        messages=[
-                            *messages,
-                            {
-                                "role": "assistant",
-                                "content": [{"type": "text", "text": llm_response}],
+        with logfire.span(f"[{challenge.id}] Execute Programs"):
+            # first try remote server Python exec
+            if USE_GRID_URL:
+                try:
+                    async with httpx.AsyncClient(timeout=120) as client:
+                        r = await client.post(
+                            url="https://arc-agi-grid-306099487123.us-central1.run.app/llm_responses_to_grid_list",
+                            json={
+                                "llm_responses": llm_responses,
+                                "challenge": Challenge.model_dump(
+                                    challenge, mode="json"
+                                ),
                             },
-                        ],
-                        python_code_str=python_str,
-                        train_attempts=train_grids,
-                        test_attempt=test_grid,
-                        config=attempt_config,
-                        usage=usage,
-                    )
+                            params={
+                                "returns_python": attempt_config.prompt_config.returns_python
+                            },
+                        )
+                        logfire.debug(
+                            f"[{challenge.id}] getting grid from server took {r.elapsed.total_seconds()}"
+                        )
+                    grid_lists = r.json()
+                except Exception as e:
+                    logfire.debug(f"ERROR RUNNING GRIDLISTS SERVER: {e}")
+                    grid_lists = None
+            # then try local Python exec
+            if grid_lists is None:
+                grid_lists = await cls.llm_responses_to_result_grids_list(
+                    llm_responses=llm_responses,
+                    challenge=challenge,
+                    returns_python=attempt_config.prompt_config.returns_python,
                 )
-        return attempts
+            logfire.debug(
+                f"[{challenge.id}] grids took {time.time() - start_grid} secs"
+            )
+            attempts: list[Attempt] = []
+            for next_message, grid_list in zip(next_messages, grid_lists, strict=True):
+                if grid_list:
+                    python_str, test_grid, train_grids = grid_list
+                    llm_response, usage = next_message
+                    attempts.append(
+                        Attempt(
+                            id=f"{challenge.id}-{random_string()}",
+                            challenge=challenge,
+                            messages=[
+                                *messages,
+                                {
+                                    "role": "assistant",
+                                    "content": [{"type": "text", "text": llm_response}],
+                                },
+                            ],
+                            python_code_str=python_str,
+                            train_attempts=train_grids,
+                            test_attempt=test_grid,
+                            config=attempt_config,
+                            usage=usage,
+                        )
+                    )
+            return attempts
 
     @classmethod
     def messages_from_fixes(

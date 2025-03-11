@@ -122,7 +122,7 @@ async def get_next_message_deepseek(
         "messages": messages,
         "model": model.value,
         "timeout": 600,
-        # "stream": False,
+        "stream": True,
     }
     b10_str = " b10" if use_baseten else ""
     if use_baseten:
@@ -134,12 +134,14 @@ async def get_next_message_deepseek(
         }
         params["max_tokens"] = 30_000
         params["stream"] = True
+    if params["stream"]:
         params["stream_options"] = {"include_usage": True}
     while True:
         try:
             request_id = random_string()
             start = time.time()
             logfire.debug(f"[{request_id}] calling deepseek{b10_str}...")
+            print("calling")
             if not params.get("stream", None):
                 print("calling")
                 message = await deepseek_client.chat.completions.create(**params)
@@ -153,29 +155,51 @@ async def get_next_message_deepseek(
                 final_content = message.choices[0].message.content
             else:
                 response = await deepseek_client.chat.completions.create(**params)
+                # Split to final_content (Python program check) and reasoning_content (extracted trace)
                 final_content = ""
-                usage = None
+                reasoning_content = ""
+                usage = ModelUsage()
                 count = 0
+                n_newlines = 0
                 async for chunk in response:
                     # print(chunk)
                     count += 1
-                    if count % 100 == 0:
+                    if count % 1000 == 0:
                         logfire.debug(f"[{request_id}] got chunk {count}")
                     if len(chunk.choices):
-                        if chunk.choices[0].delta.content:
-                            final_content += chunk.choices[0].delta.content
-                            # print(final_content)
-                    else:
-                        if details := chunk.usage.prompt_tokens_details:
-                            cached_tokens = details.cached_tokens or 0
-                        else:
-                            cached_tokens = 0
+                        delta = chunk.choices[0].delta
+                        if content := (delta.content or delta.reasoning_content):
+                            # print(content, end="", flush=True)
+                            if content == delta.content:
+                                final_content += delta.content
+                            else:
+                                reasoning_content += delta.reasoning_content
+                                if "\n" in delta.reasoning_content:
+                                    n_newlines += 1
+                                    if n_newlines > 0 and n_newlines % 10 == 0:
+                                        line_start = "\n".join(
+                                            reasoning_content.split("\n")[-4:-1]
+                                        )[:50]
+                                        logfire.debug(
+                                            f"[{request_id}] thinking line {n_newlines}: {line_start}"
+                                        )
+
+                    if u := chunk.usage:
                         usage = ModelUsage(
-                            cache_creation_input_tokens=0,
-                            cache_read_input_tokens=cached_tokens,
-                            input_tokens=chunk.usage.prompt_tokens - cached_tokens,
-                            output_tokens=chunk.usage.completion_tokens,
+                            cache_creation_input_tokens=u.prompt_cache_miss_tokens,
+                            cache_read_input_tokens=u.prompt_cache_hit_tokens,
+                            input_tokens=u.prompt_tokens,
+                            output_tokens=u.completion_tokens,
+                            reasoning_tokens=(
+                                u.completion_tokens_details.reasoning_tokens
+                                if u.completion_tokens_details
+                                else None
+                            ),
                         )
+                # <think> tag in final_content? Check.
+                logfire.debug(
+                    f"[{request_id}] <think> in final_content: {bool(final_content.count('<think>') > 0)}"
+                )
                 final_content = remove_thinking(text=final_content).strip()
                 print(final_content)
                 # TODO should i parse out thinking tags? probably
@@ -367,7 +391,9 @@ async def get_next_messages(
             ),
             *await asyncio.gather(
                 *[
-                    get_next_message_anthropic(
+                    wrap_span(
+                        get_next_message_anthropic,
+                        f"Parallel Gen {_}",
                         anthropic_client=anthropic_client,
                         system_messages=system_messages,
                         messages=messages,
@@ -406,7 +432,9 @@ async def get_next_messages(
             ),
             *await asyncio.gather(
                 *[
-                    get_next_message_openai(
+                    wrap_span(
+                        get_next_message_openai,
+                        f"Parallel Gen {_}",
                         openai_client=openai_client,
                         messages=messages,
                         model=model,
@@ -435,31 +463,11 @@ async def get_next_messages(
         messages = text_only_messages(messages)
 
         if model == Model.deep_seek_r1:
-            n_messages = [
-                await get_next_message_deepseek(
-                    deepseek_client=deepseek_client,
-                    messages=messages,
-                    model=model,
-                    temperature=temperature,
-                    use_baseten=use_baseten,
-                ),
-                *await asyncio.gather(
-                    *[
-                        get_next_message_deepseek(
-                            deepseek_client=deepseek_client,
-                            messages=messages,
-                            model=model,
-                            temperature=temperature,
-                            use_baseten=use_baseten,
-                        )
-                        for _ in range(n_times - 1)
-                    ]
-                ),
-            ]
-        elif model == Model.baseten_deepseek_r1:
             n_messages = await asyncio.gather(
                 *[
-                    get_next_message_deepseek(
+                    wrap_span(
+                        get_next_message_deepseek,
+                        f"Parallel Gen {_}",
                         deepseek_client=deepseek_client,
                         messages=messages,
                         model=model,
@@ -467,6 +475,22 @@ async def get_next_messages(
                         use_baseten=use_baseten,
                     )
                     for _ in range(n_times)
+                ]
+            )
+
+        elif model == Model.baseten_deepseek_r1:
+            n_messages = await asyncio.gather(
+                *[
+                    wrap_span(
+                        get_next_message_deepseek,
+                        f"Parallel Gen {_}",
+                        deepseek_client=deepseek_client,
+                        messages=messages,
+                        model=model,
+                        temperature=temperature,
+                        use_baseten=use_baseten,
+                    )
+                    for _ in range(n_times - 1)
                 ]
             )
         else:
@@ -520,10 +544,14 @@ async def get_next_messages(
         n_messages = [
             *await asyncio.gather(
                 *[
-                    get_next_message_gemini(
-                        cache=cache, model=model, temperature=temperature
+                    wrap_span(
+                        get_next_message_gemini,
+                        f"Parallel Gen {_}",
+                        cache=cache,
+                        model=model,
+                        temperature=temperature,
                     )
-                    for _ in range(n_times)
+                    for _ in range(n_times - 1)
                 ]
             ),
         ]
@@ -852,3 +880,9 @@ def parse_2d_arrays_from_string(s: str) -> list[list[list[int]]]:
         arrays_list.append(array_2d)
 
     return arrays_list
+
+
+# Wrap func with Logfire span. Not a decorator.
+async def wrap_span(f: T.Callable, span_name: str, *args, **kwargs):
+    with logfire.span(span_name):
+        return await f(*args, **kwargs)

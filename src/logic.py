@@ -496,6 +496,7 @@ async def run_fixes_tree(
 
             # now run the fixes
             all_attempts.extend(
+                # recurse on edge children until hit leaf of tree
                 await run_fixes_tree(
                     parent_attempts=parent_attempts,
                     edges=fix_attempt_config.fixes,
@@ -536,15 +537,19 @@ async def run_tree(
         message = f"[{challenge.id}] running root node with {root_attempt_config.attempts} attempts."
         print(message)
         logfire.debug(message)
-        local_attempts = await Attempt.run_many(
-            challenge=challenge,
-            attempt_config=root_attempt_config,
-            raise_exception=False,
-            fixing=[],
-            n_times=root_attempt_config.attempts,
-        )
+        with logfire.span(
+            f"[{challenge.id}] run root (gen=0, n={root_attempt_config.attempts})"
+        ):
+            local_attempts = await Attempt.run_many(
+                challenge=challenge,
+                attempt_config=root_attempt_config,
+                raise_exception=False,
+                fixing=[],
+                n_times=root_attempt_config.attempts,
+            )
         start_eval = time.time()
         took_level = time.time() - start_level
+        # compute
         eval_attempts(
             attempts=local_attempts,
             config=root_attempt_config,
